@@ -1,0 +1,71 @@
+<ServerManagerConfiguration>
+
+  <ProxyGroup name="sources">
+    <SourceProxy name="ViennaPSGeometrySource"
+                 class="vtkViennaPSGeometrySource"
+                 label="ViennaPS Geometry">
+
+      <InputProperty name="Input"
+                     command="SetInputConnection"
+                     port_index="0">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkPolyData"/>
+          <DataType value="vtkUnstructuredGrid"/>
+        </DataTypeDomain>
+        <Hints>
+          <Optional/>
+        </Hints>
+        <Documentation>
+          Optional VTK mesh input to create ViennaPS domain from.
+          Connect a ParaView source (Box, Cylinder, etc.) to create
+          a domain from its geometry.
+        </Documentation>
+      </InputProperty>
+
+      <IntVectorProperty name="Dummy"
+                         command="SetDummy"
+                         panel_widget="pqViennaPSWidget"
+                         panel_visibility="default"
+                         label="">
+      <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="ViennaPS" />
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+
+  <ProxyGroup name="filters">
+    <SourceProxy name="ViennaPSProcessFilter"
+                 class="vtkViennaPSProcessFilter"
+                 label="ViennaPS Process">
+
+      <InputProperty name="Input"
+                     command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <Documentation>Input domain object from ViennaPS Geometry Source</Documentation>
+      </InputProperty>
+
+      <IntVectorProperty name="Dummy"
+                         command="SetDummy"
+                         panel_widget="pqViennaPSWidget"
+                         panel_visibility="default"
+                         label="">
+      <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="ViennaPS" />
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+
+</ServerManagerConfiguration>

@@ -1,0 +1,17 @@
+NAME
+  ViennaPSPlugin
+DEPENDS
+  VTK::FiltersCore
+  VTK::IOCore
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::CommonExecutionModel
+  ParaView::RemotingViews
+PRIVATE_DEPENDS
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::CommonExecutionModel
+  VTK::FiltersGeneral
+  VTK::FiltersGeometry
+  ParaView::VTKExtensionsCore
+  ParaView::RemotingCore
