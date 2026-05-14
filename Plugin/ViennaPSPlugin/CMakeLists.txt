@@ -28,6 +28,8 @@ target_link_libraries(ViennaPSPlugin
     Qt6::Widgets
     ParaView::pqApplicationComponents
     ParaView::RemotingViews
-    ParaView::RemotingServerManager)
+    ParaView::RemotingServerManager
+  PUBLIC
+    ViennaPS)
 
 target_sources(ViennaPSPlugin PRIVATE ${widget_interface_sources})
