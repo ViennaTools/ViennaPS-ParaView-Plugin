@@ -2,7 +2,6 @@
 
 A ParaView plugin for the [ViennaPS](https://github.com/ViennaTools/ViennaPS) semiconductor process simulation library. Adds a *ViennaPS Geometry* source and a *ViennaPS Process* filter to ParaView, so you can build domains and run process simulations interactively.
 
-This is the practical part of my Bachelor's thesis at TU Wien.
 
 ## Dependencies
 
@@ -11,20 +10,33 @@ This is the practical part of my Bachelor's thesis at TU Wien.
 - ViennaCS 2.0.1, ViennaHRLE 1.0.0, Embree 4
 - C++20 compiler, CMake, OpenMP
 
-The paths in `CMakeLists.txt` and `build.sh` assume ParaView and the Vienna libraries live under `~/BachelorThesis/`. Adjust if needed.
+`CMakeLists.txt` expects ParaView and the Vienna libraries to be reachable via CMake's find mechanism. Point it to your local installs through the variables below.
 
 ## Build
 
 ```bash
-./build.sh
+mkdir -p build && cd build
+cmake .. -DParaView_DIR=/path/to/paraview/build -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
 ```
 
 The plugin lands in `build/lib/paraview-5.13/plugins/ViennaPSPluginModule/ViennaPSPluginModule.so`.
 
 ## Run
 
-```bash
-./test.sh
+Open ParaView and load the plugin via *Tools → Manage Plugins → Load New…*, then pick the `.so` file above.
+
+To start ParaView with the plugin already loaded, drop this into a Python file:
+
+```python
+from paraview.simple import *
+LoadPlugin('/absolute/path/to/ViennaPSPluginModule.so')
 ```
 
-This launches ParaView with the plugin already loaded. To load it manually instead, open ParaView and go to *Tools → Manage Plugins → Load New…* and pick the `.so` file above.
+and launch ParaView with it:
+
+```bash
+paraview --script=load_plugin.py
+```
+
+For debugging, prepend `gdb --args` or run under `valgrind` (use ParaView's `vtkkwiml.supp` suppression file to cut noise).
