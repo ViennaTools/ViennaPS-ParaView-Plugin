@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
-project(ViennaPSPluginModule LANGUAGES CXX)
+project(ViennaPSPluginModule LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,9 +26,7 @@ CPMAddPackage(
   VERSION 5.7.2
   GIT_REPOSITORY "https://github.com/mominie/ViennaLS"
   GIT_TAG "feat/vtk-memory-io"
-  OPTIONS
-    "VIENNALS_USE_VTK ON"
-    "VIENNALS_VTK_RENDERING OFF")
+  OPTIONS "VIENNALS_USE_VTK ON" "VIENNALS_VTK_RENDERING OFF")
 
 CPMAddPackage(
   NAME ViennaPS
@@ -42,21 +40,22 @@ add_compile_definitions(VIENNARAY_USE_RAY_MASKING)
 enable_testing()
 
 set("_paraview_plugin_default_${PROJECT_NAME}" ON)
-paraview_plugin_scan(
-  PLUGIN_FILES      "${CMAKE_CURRENT_SOURCE_DIR}/Plugin/paraview.plugin"
-  PROVIDES_PLUGINS  plugins
-  REQUIRES_MODULES  required_modules)
+paraview_plugin_scan(PLUGIN_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Plugin/paraview.plugin"
+                     PROVIDES_PLUGINS plugins REQUIRES_MODULES required_modules)
 
 foreach(module IN LISTS required_modules)
   if(NOT TARGET "${module}")
-    message(WARNING
-      "Skipping plugin ${PROJECT_NAME}: missing required module: ${module}")
+    message(WARNING "Skipping plugin ${PROJECT_NAME}: missing required module: ${module}")
     return()
   endif()
 endforeach()
 
 paraview_plugin_build(
-  RUNTIME_DESTINATION "${CMAKE_INSTALL_BINDIR}"
-  LIBRARY_DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-  LIBRARY_SUBDIRECTORY "${PARAVIEW_PLUGIN_SUBDIR}"
-  PLUGINS ${plugins})
+  RUNTIME_DESTINATION
+  "${CMAKE_INSTALL_BINDIR}"
+  LIBRARY_DESTINATION
+  "${CMAKE_INSTALL_LIBDIR}"
+  LIBRARY_SUBDIRECTORY
+  "${PARAVIEW_PLUGIN_SUBDIR}"
+  PLUGINS
+  ${plugins})
