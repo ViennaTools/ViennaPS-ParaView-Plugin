@@ -1,0 +1,12 @@
+NAME
+  ViennaPSPluginModule
+DESCRIPTION
+  A ParaView plugin for ViennaPS semiconductor process simulation.
+  Provides geometry creation and process simulation capabilities.
+REQUIRES_MODULES
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::CommonExecutionModel
+  VTK::FiltersCore
+  VTK::IOCore
+  ParaView::pqComponents
