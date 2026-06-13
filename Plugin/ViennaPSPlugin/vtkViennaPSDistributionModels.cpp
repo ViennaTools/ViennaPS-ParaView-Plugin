@@ -1052,6 +1052,22 @@ void registerIsotropicProcessModel() {
 
   isotropicProcess.parameters.push_back(maskParam);
 
+  ParameterMetadata depositionMaterialParam;
+  depositionMaterialParam.name = "DepositionMaterial";
+  depositionMaterialParam.displayName = "Deposition Material";
+  depositionMaterialParam.documentation =
+      "Material to deposit when the rate is positive";
+  depositionMaterialParam.type = ParameterType::ENUM;
+  depositionMaterialParam.defaultValue =
+      static_cast<int>(viennaps::Material::SiO2);
+  depositionMaterialParam.category = ParameterCategory::BASIC;
+  depositionMaterialParam.required = false;
+  depositionMaterialParam.enumOptions = materialNames;
+  for (size_t i = 0; i < materialNames.size(); ++i) {
+    depositionMaterialParam.materialMap[static_cast<int>(i)] = materialNames[i];
+  }
+  isotropicProcess.parameters.push_back(depositionMaterialParam);
+
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
                     vtkDataObject *output, const ParameterMap &params) {
     auto &registry = vtkViennaPSModelRegistry::getInstance();
@@ -1059,11 +1075,22 @@ void registerIsotropicProcessModel() {
     double processTime =
         registry.getParameter<double>(params, "ProcessTime", 5.0);
     double processRate =
-        registry.getParameter<double>(params, "ProcessRate", 1.0);
+        registry.getParameter<double>(params, "Rate", 4.0);
+    int depositionMaterialId = registry.getParameter<int>(
+        params, "DepositionMaterial",
+        static_cast<int>(viennaps::Material::SiO2));
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
           constexpr int Dim = decltype(dimTag)::value;
+
+          // Positive rate means deposition: add the selected material on top
+          // of the domain before running the process. Etching or zero-rate
+          // cases keep the existing surface and rely on mask handling below.
+          if (processRate > 0) {
+            psDomain->duplicateTopLevelSet(
+                static_cast<viennaps::Material>(depositionMaterialId));
+          }
 
           std::vector<viennaps::Material> maskMaterials;
           if (params.find("MaskMaterials") != params.end()) {

@@ -146,115 +146,7 @@ void registerTrenchModel() {
        "",
        "",
        1.0,
-       false},
-      {"useMultiLayer",
-       "Multi-Layer Mode",
-       "Use multi-layer configuration instead of single trench",
-       ParameterType::BOOLEAN,
-       false,
-       false,
-       true,
-       {},
-       {},
-       ParameterCategory::ADVANCED,
-       "",
-       "",
-       1.0,
-       false},
-      {"numLayers",
-       "Number of Layers",
-       "Number of material layers (multi-layer mode)",
-       ParameterType::INTEGER,
-       2,
-       1,
-       10,
-       {},
-       {},
-       ParameterCategory::ADVANCED,
-       "",
-       "",
-       1.0,
        false}};
-
-  // Add per-layer parameters (Layer1_ through Layer10_)
-  for (int i = 1; i <= 10; i++) {
-    std::string prefix = "Layer" + std::to_string(i) + "_";
-    std::string label = "Layer " + std::to_string(i) + " ";
-
-    trenchMeta.parameters.push_back({prefix + "Height",
-                                     label + "Height",
-                                     "Height of layer " + std::to_string(i),
-                                     ParameterType::DOUBLE,
-                                     5.0,
-                                     0.1,
-                                     1e6,
-                                     {},
-                                     {},
-                                     ParameterCategory::ADVANCED,
-                                     "",
-                                     "",
-                                     0.5,
-                                     false});
-    trenchMeta.parameters.push_back(
-        {prefix + "Width",
-         label + "Width",
-         "Cutout width of layer " + std::to_string(i),
-         ParameterType::DOUBLE,
-         4.0,
-         0.1,
-         1e6,
-         {},
-         {},
-         ParameterCategory::ADVANCED,
-         "",
-         "",
-         0.5,
-         false});
-    trenchMeta.parameters.push_back(
-        {prefix + "TaperAngle",
-         label + "Taper Angle",
-         "Taper angle for layer " + std::to_string(i) + " (degrees)",
-         ParameterType::DOUBLE,
-         0.0,
-         -30.0,
-         30.0,
-         {},
-         {},
-         ParameterCategory::ADVANCED,
-         "",
-         "\u00b0",
-         0.5,
-         false});
-    trenchMeta.parameters.push_back({prefix + "Material",
-                                     label + "Material",
-                                     "Material for layer " + std::to_string(i),
-                                     ParameterType::ENUM,
-                                     getMaterialIndex(viennaps::Material::Si),
-                                     0,
-                                     static_cast<int>(materialNames.size() - 1),
-                                     materialNames,
-                                     {},
-                                     ParameterCategory::ADVANCED,
-                                     "",
-                                     "",
-                                     1.0,
-                                     false});
-    trenchMeta.parameters.push_back(
-        {prefix + "IsMask",
-         label + "Is Mask",
-         "Apply cutout to layer " + std::to_string(i),
-         ParameterType::BOOLEAN,
-         false,
-         false,
-         true,
-         {},
-         {},
-         ParameterCategory::ADVANCED,
-         "",
-         "",
-         1.0,
-         false});
-  }
 
   auto trenchFactory = [](std::shared_ptr<void> psDomainVoid, int dimension,
                           vtkDataObject *output, const ParameterMap &params) {
@@ -262,8 +154,6 @@ void registerTrenchModel() {
 
     bool periodicBoundary =
         registry.getParameter<bool>(params, "periodicBoundary", false);
-    bool useMultiLayer =
-        registry.getParameter<bool>(params, "useMultiLayer", false);
     bool halfTrench = registry.getParameter<bool>(params, "halfTrench", false);
 
     ViennaPSModels::withDomain(
@@ -282,71 +172,37 @@ void registerTrenchModel() {
                               ? viennaps::BoundaryType::PERIODIC_BOUNDARY
                               : viennaps::BoundaryType::REFLECTIVE_BOUNDARY);
 
-          if (useMultiLayer) {
-            int numLayers = registry.getParameter<int>(params, "numLayers", 2);
-            auto materialNames = getAllMaterialNames();
+          double width =
+              registry.getParameter<double>(params, "trenchWidth", 4.0);
+          double depth =
+              registry.getParameter<double>(params, "trenchDepth", 8.0);
+          double taperAngle =
+              registry.getParameter<double>(params, "taperAngle", 0.0);
+          double maskHeight =
+              registry.getParameter<double>(params, "maskHeight", 0.0);
+          double maskTaperAngle =
+              registry.getParameter<double>(params, "maskTaperAngle", 0.0);
 
-            std::vector<
-                typename viennaps::MakeTrench<NumericType, Dim>::MaterialLayer>
-                layers;
-            for (int i = 1; i <= numLayers; i++) {
-              std::string prefix = "Layer" + std::to_string(i) + "_";
-              typename viennaps::MakeTrench<NumericType, Dim>::MaterialLayer
-                  layer;
-              layer.height =
-                  registry.getParameter<double>(params, prefix + "Height", 5.0);
-              layer.width =
-                  registry.getParameter<double>(params, prefix + "Width", 4.0);
-              layer.taperAngle = registry.getParameter<double>(
-                  params, prefix + "TaperAngle", 0.0);
-              int layerMatIndex =
-                  registry.getParameter<int>(params, prefix + "Material", 0);
-              if (layerMatIndex >= 0 &&
-                  layerMatIndex < static_cast<int>(materialNames.size())) {
-                layer.material =
-                    getMaterialFromString(materialNames[layerMatIndex]);
-              }
-              layer.isMask =
-                  registry.getParameter<bool>(params, prefix + "IsMask", false);
-              layers.push_back(layer);
-            }
-
-            viennaps::MakeTrench<NumericType, Dim> trench(psDomain, layers,
-                                                          halfTrench);
-            trench.apply();
-          } else {
-            double width =
-                registry.getParameter<double>(params, "trenchWidth", 4.0);
-            double depth =
-                registry.getParameter<double>(params, "trenchDepth", 8.0);
-            double taperAngle =
-                registry.getParameter<double>(params, "taperAngle", 0.0);
-            double maskHeight =
-                registry.getParameter<double>(params, "maskHeight", 0.0);
-            double maskTaperAngle =
-                registry.getParameter<double>(params, "maskTaperAngle", 0.0);
-
-            int matIndex = registry.getParameter<int>(params, "material", 0);
-            auto materialNames = getAllMaterialNames();
-            viennaps::Material material = viennaps::Material::Si;
-            if (matIndex >= 0 &&
-                matIndex < static_cast<int>(materialNames.size())) {
-              material = getMaterialFromString(materialNames[matIndex]);
-            }
-
-            int maskMatIndex =
-                registry.getParameter<int>(params, "maskMaterial", 0);
-            viennaps::Material maskMaterial = viennaps::Material::Mask;
-            if (maskMatIndex >= 0 &&
-                maskMatIndex < static_cast<int>(materialNames.size())) {
-              maskMaterial = getMaterialFromString(materialNames[maskMatIndex]);
-            }
-
-            viennaps::MakeTrench<NumericType, Dim> trench(
-                psDomain, width, depth, taperAngle, maskHeight, maskTaperAngle,
-                halfTrench, material, maskMaterial);
-            trench.apply();
+          int matIndex = registry.getParameter<int>(params, "material", 0);
+          auto materialNames = getAllMaterialNames();
+          viennaps::Material material = viennaps::Material::Si;
+          if (matIndex >= 0 &&
+              matIndex < static_cast<int>(materialNames.size())) {
+            material = getMaterialFromString(materialNames[matIndex]);
           }
+
+          int maskMatIndex =
+              registry.getParameter<int>(params, "maskMaterial", 0);
+          viennaps::Material maskMaterial = viennaps::Material::Mask;
+          if (maskMatIndex >= 0 &&
+              maskMatIndex < static_cast<int>(materialNames.size())) {
+            maskMaterial = getMaterialFromString(materialNames[maskMatIndex]);
+          }
+
+          viennaps::MakeTrench<NumericType, Dim> trench(
+              psDomain, width, depth, taperAngle, maskHeight, maskTaperAngle,
+              halfTrench, material, maskMaterial);
+          trench.apply();
           ViennaPSModels::convertToVTK<Dim>(psDomain, output, params);
         });
   };

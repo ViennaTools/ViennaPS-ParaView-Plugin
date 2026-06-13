@@ -189,7 +189,7 @@ void pqViennaPSWidget::initialize()
   this, [this]() { emit changeAvailable(); });
 
   if (modelSelector->count() > 0) {
-    onModelChanged(0);
+    onModelChanged(modelSelector->currentIndex());
   }
 }
 
