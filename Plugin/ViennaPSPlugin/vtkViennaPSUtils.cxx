@@ -9,12 +9,14 @@
 #include <vtkPointData.h>
 #include <vtkCellData.h>
 #include <vtkUnstructuredGrid.h>
+#include <vtkDataSet.h>
 #include <vtkAppendFilter.h>
 #include <vtkInformation.h>
 
 #include <psDomain.hpp>
 #include "psSurfacePointValuesToLevelSet.hpp"
 #include <lsToSurfaceMesh.hpp>
+#include <lsToMultiSurfaceMesh.hpp>
 #include <lsToDiskMesh.hpp>
 #include <lsFromSurfaceMesh.hpp>
 #include <lsMesh.hpp>
@@ -60,18 +62,14 @@ void ConvertDomainToVTK(
                 break;
             }
             auto mesh = viennacore::SmartPointer<viennals::Mesh<NumericType>>::New();
-            viennals::ToDiskMesh<NumericType, D> meshConverter;
-            meshConverter.setMesh(mesh);
-            if (psDomain->getMaterialMap())
-              meshConverter.setMaterialMap(psDomain->getMaterialMap()->getMaterialMap());
+            viennals::ToMultiSurfaceMesh<NumericType, D> meshConverter(mesh);
             for (const auto ls : psDomain->getLevelSets()) {
               meshConverter.insertNextLevelSet(ls);
             }
+            if (psDomain->getMaterialMap())
+              meshConverter.setMaterialMap(psDomain->getMaterialMap()->getMaterialMap());
             meshConverter.apply();
-            viennaps::SurfacePointValuesToLevelSet<NumericType, D>(psDomain->getLevelSets().back(), mesh,
-                                                         {"MaterialIds"}).apply();
 
-            viennals::ToSurfaceMesh<NumericType, D>(psDomain->getLevelSets().back(), mesh).apply();
             viennals::VTKWriter<NumericType> writer(mesh);
             writer.setMetaData(psDomain->getMetaData());
 
@@ -123,6 +121,17 @@ void ConvertDomainToVTK(
     default:
         break;
     }
+
+    if (vtkDataSet* outputDataSet = vtkDataSet::SafeDownCast(output)) {
+        vtkCellData* cellData = outputDataSet->GetCellData();
+        if (!cellData->HasArray("MaterialIds") && cellData->HasArray("Material")) {
+            cellData->GetArray("Material")->SetName("MaterialIds");
+        }
+        if (cellData->HasArray("MaterialIds")) {
+            cellData->SetActiveScalars("MaterialIds");
+        }
+    }
+
     VPSLOG_DEBUG(nullptr, "Domain converted to VTK.");
 }
 
