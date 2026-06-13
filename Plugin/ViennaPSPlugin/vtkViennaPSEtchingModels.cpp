@@ -8,7 +8,6 @@
 #include <models/psHBrO2Etching.hpp>
 #include <models/psIonBeamEtching.hpp>
 #include <models/psIonBeamParameters.hpp>
-#include <models/psOxideRegrowth.hpp>
 #include <models/psPlasmaEtchingParameters.hpp>
 #include <models/psSF6C4F8Etching.hpp>
 #include <models/psSF6O2Etching.hpp>
@@ -328,7 +327,7 @@ void registerSF6O2EtchingProcessModel() {
   ionFluxParam.type = ParameterType::DOUBLE;
   ionFluxParam.defaultValue = 12.0;
   ionFluxParam.minValue = 0.0;
-  ionFluxParam.maxValue = 100.0;
+    ionFluxParam.maxValue = std::numeric_limits<double>::max();
   ionFluxParam.category = ParameterCategory::BASIC;
   ionFluxParam.unit = "";
   ionFluxParam.stepSize = 1.0;
@@ -342,7 +341,7 @@ void registerSF6O2EtchingProcessModel() {
   etchantFluxParam.type = ParameterType::DOUBLE;
   etchantFluxParam.defaultValue = 1800.0;
   etchantFluxParam.minValue = 0.0;
-  etchantFluxParam.maxValue = 10000.0;
+    etchantFluxParam.maxValue = std::numeric_limits<double>::max();
   etchantFluxParam.category = ParameterCategory::BASIC;
   etchantFluxParam.unit = "";
   etchantFluxParam.stepSize = 100.0;
@@ -356,7 +355,7 @@ void registerSF6O2EtchingProcessModel() {
   oxygenFluxParam.type = ParameterType::DOUBLE;
   oxygenFluxParam.defaultValue = 100.0;
   oxygenFluxParam.minValue = 0.0;
-  oxygenFluxParam.maxValue = 1000.0;
+    oxygenFluxParam.maxValue = std::numeric_limits<double>::max();
   oxygenFluxParam.category = ParameterCategory::BASIC;
   oxygenFluxParam.unit = "";
   oxygenFluxParam.stepSize = 10.0;
@@ -939,279 +938,6 @@ void registerSF6C4F8EtchingProcessModel() {
 
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "SF6C4F8Etching", sf6c4f8Process, factory);
-}
-
-void registerOxideRegrowthProcessModel() {
-  using namespace ViennaPSMeta;
-
-  ModelMetadata oxideRegrowthProcess;
-  oxideRegrowthProcess.className = "OxideRegrowth";
-  oxideRegrowthProcess.displayName = "Oxide Regrowth Process";
-  oxideRegrowthProcess.description =
-      "Selective etching with oxide redeposition and byproduct diffusion "
-      "dynamics";
-  oxideRegrowthProcess.type = ModelType::PROCESS;
-
-  ParameterMetadata nitrideRateParam;
-  nitrideRateParam.name = "NitrideEtchRate";
-  nitrideRateParam.displayName = "Si3N4 Etch Rate";
-  nitrideRateParam.documentation = "Etching rate for silicon nitride";
-  nitrideRateParam.type = ParameterType::DOUBLE;
-  nitrideRateParam.defaultValue = 1.0;
-  nitrideRateParam.minValue = 0.0;
-  nitrideRateParam.maxValue = 100.0;
-  nitrideRateParam.category = ParameterCategory::BASIC;
-  nitrideRateParam.unit = "";
-  nitrideRateParam.stepSize = 0.1;
-  nitrideRateParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(nitrideRateParam);
-
-  ParameterMetadata oxideRateParam;
-  oxideRateParam.name = "OxideEtchRate";
-  oxideRateParam.displayName = "SiO2 Etch Rate";
-  oxideRateParam.documentation = "Etching rate for silicon dioxide";
-  oxideRateParam.type = ParameterType::DOUBLE;
-  oxideRateParam.defaultValue = 0.1;
-  oxideRateParam.minValue = 0.0;
-  oxideRateParam.maxValue = 100.0;
-  oxideRateParam.category = ParameterCategory::BASIC;
-  oxideRateParam.unit = "";
-  oxideRateParam.stepSize = 0.01;
-  oxideRateParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(oxideRateParam);
-
-  ParameterMetadata redepositionRateParam;
-  redepositionRateParam.name = "RedepositionRate";
-  redepositionRateParam.displayName = "Redeposition Rate";
-  redepositionRateParam.documentation = "Rate of material redeposition";
-  redepositionRateParam.type = ParameterType::DOUBLE;
-  redepositionRateParam.defaultValue = 1.0;
-  redepositionRateParam.minValue = 0.0;
-  redepositionRateParam.maxValue = 10.0;
-  redepositionRateParam.category = ParameterCategory::BASIC;
-  redepositionRateParam.unit = "";
-  redepositionRateParam.stepSize = 0.1;
-  redepositionRateParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(redepositionRateParam);
-
-  ParameterMetadata redepoThresholdParam;
-  redepoThresholdParam.name = "RedepositionThreshold";
-  redepoThresholdParam.displayName = "Redeposition Threshold";
-  redepoThresholdParam.documentation = "Minimum concentration for redeposition";
-  redepoThresholdParam.type = ParameterType::DOUBLE;
-  redepoThresholdParam.defaultValue = 0.1;
-  redepoThresholdParam.minValue = 0.0;
-  redepoThresholdParam.maxValue = 1.0;
-  redepoThresholdParam.category = ParameterCategory::BASIC;
-  redepoThresholdParam.unit = "";
-  redepoThresholdParam.stepSize = 0.01;
-  redepoThresholdParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(redepoThresholdParam);
-
-  ParameterMetadata redepoTimeIntParam;
-  redepoTimeIntParam.name = "RedepositionTimeInterval";
-  redepoTimeIntParam.displayName = "Redeposition Time Interval";
-  redepoTimeIntParam.documentation =
-      "Time interval between redeposition events (s)";
-  redepoTimeIntParam.type = ParameterType::DOUBLE;
-  redepoTimeIntParam.defaultValue = 60.0;
-  redepoTimeIntParam.minValue = 1.0;
-  redepoTimeIntParam.maxValue = 600.0;
-  redepoTimeIntParam.category = ParameterCategory::BASIC;
-  redepoTimeIntParam.unit = "";
-  redepoTimeIntParam.stepSize = 10.0;
-  redepoTimeIntParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(redepoTimeIntParam);
-
-  ParameterMetadata diffusionParam;
-  diffusionParam.name = "DiffusionCoefficient";
-  diffusionParam.displayName = "Diffusion Coefficient";
-  diffusionParam.documentation = "Byproduct diffusion coefficient";
-  diffusionParam.type = ParameterType::DOUBLE;
-  diffusionParam.defaultValue = 1.0;
-  diffusionParam.minValue = 0.01;
-  diffusionParam.maxValue = 100.0;
-  diffusionParam.category = ParameterCategory::ADVANCED;
-  diffusionParam.unit = "";
-  diffusionParam.stepSize = 0.1;
-  diffusionParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(diffusionParam);
-
-  ParameterMetadata sinkStrengthParam;
-  sinkStrengthParam.name = "SinkStrength";
-  sinkStrengthParam.displayName = "Sink Strength";
-  sinkStrengthParam.documentation =
-      "Strength of byproduct removal at top boundary";
-  sinkStrengthParam.type = ParameterType::DOUBLE;
-  sinkStrengthParam.defaultValue = 1.0;
-  sinkStrengthParam.minValue = 0.0;
-  sinkStrengthParam.maxValue = 10.0;
-  sinkStrengthParam.category = ParameterCategory::ADVANCED;
-  sinkStrengthParam.unit = "";
-  sinkStrengthParam.stepSize = 0.1;
-  sinkStrengthParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(sinkStrengthParam);
-
-  ParameterMetadata scallopVelParam;
-  scallopVelParam.name = "ScallopVelocity";
-  scallopVelParam.displayName = "Scallop Stream Velocity";
-  scallopVelParam.documentation =
-      "Velocity of byproduct stream at scallop regions";
-  scallopVelParam.type = ParameterType::DOUBLE;
-  scallopVelParam.defaultValue = 1.0;
-  scallopVelParam.minValue = 0.0;
-  scallopVelParam.maxValue = 10.0;
-  scallopVelParam.category = ParameterCategory::ADVANCED;
-  scallopVelParam.unit = "";
-  scallopVelParam.stepSize = 0.1;
-  scallopVelParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(scallopVelParam);
-
-  ParameterMetadata centerVelParam;
-  centerVelParam.name = "CenterVelocity";
-  centerVelParam.displayName = "Center Stream Velocity";
-  centerVelParam.documentation = "Velocity of byproduct stream at hole center";
-  centerVelParam.type = ParameterType::DOUBLE;
-  centerVelParam.defaultValue = 1.0;
-  centerVelParam.minValue = 0.0;
-  centerVelParam.maxValue = 10.0;
-  centerVelParam.category = ParameterCategory::ADVANCED;
-  centerVelParam.unit = "";
-  centerVelParam.stepSize = 0.1;
-  centerVelParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(centerVelParam);
-
-  ParameterMetadata topHeightParam;
-  topHeightParam.name = "TopHeight";
-  topHeightParam.displayName = "Top Boundary Height";
-  topHeightParam.documentation = "Z-coordinate of the top boundary";
-  topHeightParam.type = ParameterType::DOUBLE;
-  topHeightParam.defaultValue = 100.0;
-  topHeightParam.minValue = 0.0;
-  topHeightParam.maxValue = 1000.0;
-  topHeightParam.category = ParameterCategory::BASIC;
-  topHeightParam.unit = "";
-  topHeightParam.stepSize = 10.0;
-  topHeightParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(topHeightParam);
-
-  ParameterMetadata centerWidthParam;
-  centerWidthParam.name = "CenterWidth";
-  centerWidthParam.displayName = "Hole Diameter";
-  centerWidthParam.documentation = "Diameter of the center hole";
-  centerWidthParam.type = ParameterType::DOUBLE;
-  centerWidthParam.defaultValue = 50.0;
-  centerWidthParam.minValue = 1.0;
-  centerWidthParam.maxValue = 500.0;
-  centerWidthParam.category = ParameterCategory::BASIC;
-  centerWidthParam.unit = "";
-  centerWidthParam.stepSize = 5.0;
-  centerWidthParam.required = true;
-  oxideRegrowthProcess.parameters.push_back(centerWidthParam);
-
-  ParameterMetadata timeStabilityParam;
-  timeStabilityParam.name = "TimeStabilityFactor";
-  timeStabilityParam.displayName = "Time Stability Factor";
-  timeStabilityParam.documentation =
-      "Factor for numerical time step stability (0-1)";
-  timeStabilityParam.type = ParameterType::DOUBLE;
-  timeStabilityParam.defaultValue = 0.245;
-  timeStabilityParam.minValue = 0.01;
-  timeStabilityParam.maxValue = 0.5;
-  timeStabilityParam.category = ParameterCategory::ADVANCED;
-  timeStabilityParam.unit = "";
-  timeStabilityParam.stepSize = 0.01;
-  timeStabilityParam.required = false;
-  oxideRegrowthProcess.parameters.push_back(timeStabilityParam);
-
-  auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
-                    vtkDataObject *output, const ParameterMap &params) {
-    auto &registry = vtkViennaPSModelRegistry::getInstance();
-
-    double processTime =
-        registry.getParameter<double>(params, "ProcessTime", 100.0);
-    double nitrideEtchRate =
-        registry.getParameter<double>(params, "NitrideEtchRate", 1.0);
-    double oxideEtchRate =
-        registry.getParameter<double>(params, "OxideEtchRate", 0.1);
-    double redepositionRate =
-        registry.getParameter<double>(params, "RedepositionRate", 1.0);
-    double redepositionThreshold =
-        registry.getParameter<double>(params, "RedepositionThreshold", 0.1);
-    double redepositionTimeInt =
-        registry.getParameter<double>(params, "RedepositionTimeInterval", 60.0);
-    double diffusionCoeff =
-        registry.getParameter<double>(params, "DiffusionCoefficient", 1.0);
-    double sinkStrength =
-        registry.getParameter<double>(params, "SinkStrength", 1.0);
-    double scallopVelocity =
-        registry.getParameter<double>(params, "ScallopVelocity", 1.0);
-    double centerVelocity =
-        registry.getParameter<double>(params, "CenterVelocity", 1.0);
-    double topHeight =
-        registry.getParameter<double>(params, "TopHeight", 100.0);
-    double centerWidth =
-        registry.getParameter<double>(params, "CenterWidth", 50.0);
-    double timeStabilityFactor =
-        registry.getParameter<double>(params, "TimeStabilityFactor", 0.245);
-
-    ViennaPSModels::withDomain(
-        psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
-          constexpr int Dim = decltype(dimTag)::value;
-
-          auto model = viennaps::
-              SmartPointer<viennaps::OxideRegrowth<NumericType, Dim>>::New(
-                  nitrideEtchRate, oxideEtchRate, redepositionRate,
-                  redepositionThreshold, redepositionTimeInt, diffusionCoeff,
-                  sinkStrength, scallopVelocity, centerVelocity, topHeight,
-                  centerWidth, timeStabilityFactor);
-
-          VPSLOG_DEBUG(nullptr, "Si3N4 etch rate: ", nitrideEtchRate, " nm/s");
-          VPSLOG_DEBUG(nullptr, "SiO2 etch rate: ", oxideEtchRate, " nm/s");
-          VPSLOG_DEBUG(nullptr, "Redeposition rate: ", redepositionRate);
-          VPSLOG_DEBUG(nullptr,
-                       "Redeposition threshold: ", redepositionThreshold);
-          VPSLOG_DEBUG(nullptr,
-                       "Redeposition time interval: ", redepositionTimeInt,
-                       " s");
-          VPSLOG_DEBUG(nullptr, "Top height: ", topHeight, " nm");
-          VPSLOG_DEBUG(nullptr, "Hole diameter: ", centerWidth, " nm");
-
-          viennaps::Process<NumericType, Dim> process;
-          process.setDomain(psDomain);
-          process.setProcessModel(model);
-          {
-            viennaps::RayTracingParameters rayParams;
-            rayParams.raysPerPoint = static_cast<unsigned>(
-                registry.getParameter<int>(params, "NumRaysPerPoint", 1000));
-            process.setParameters(rayParams);
-          }
-
-          if (!psDomain->getCellSet()) {
-            double gridDelta = psDomain->getGrid().getGridDelta();
-            psDomain->generateCellSet(2 * gridDelta, viennaps::Material::GAS,
-                                      true);
-          }
-
-#ifndef MULTI_STEP
-          process.setProcessDuration(processTime);
-          process.apply();
-#else
-                const int numSteps = 20;
-                const double stepTime = processTime / numSteps;
-
-                process.setProcessDuration(stepTime);
-                for (int step = 0; step < numSteps; ++step) {
-                    process.apply();
-                }
-#endif
-
-          ViennaPSModels::convertToVTK<Dim>(psDomain, output, params);
-        });
-  };
-
-  vtkViennaPSModelRegistry::getInstance().registerProcessModel(
-      "OxideRegrowth", oxideRegrowthProcess, factory);
 }
 
 void registerIonBeamEtchingProcessModel() {
@@ -3134,7 +2860,6 @@ void ViennaPSModels::initializeEtchingModels() {
   registerWetEtchingProcessModel();
   registerSF6O2EtchingProcessModel();
   registerSF6C4F8EtchingProcessModel();
-  registerOxideRegrowthProcessModel();
   registerIonBeamEtchingProcessModel();
   registerHBrO2EtchingProcessModel();
   registerFluorocarbonEtchingProcessModel();

@@ -77,7 +77,14 @@ void pqViennaPSWidget::initialize()
     modelSelector->addItem(QString::fromStdString(metadata.displayName),
                           QString::fromStdString(modelName));
   }
-  
+
+  // Default the process selector to IsotropicProcess when available.
+  if (!isSource) {
+    int isoIdx = modelSelector->findData(QString::fromStdString("IsotropicProcess"));
+    if (isoIdx >= 0)
+      modelSelector->setCurrentIndex(isoIdx);
+  }
+
   modelLayout->addWidget(modelSelector);
   mainLayout->addWidget(modelGroup);
 
@@ -99,7 +106,7 @@ void pqViennaPSWidget::initialize()
   commonForm->addRow("X Extent:", xExtentSpinBox);
 
   yExtentSpinBox = new QDoubleSpinBox(this);
-  yExtentSpinBox->setRange(0.001, 1000000.0);
+  yExtentSpinBox->setRange(0.0, 1000000.0);
   yExtentSpinBox->setSingleStep(1.0);
   yExtentSpinBox->setValue(10.0);
   yExtentSpinBox->setToolTip("Domain extent in Y direction (in consistent domain units)");
