@@ -27,7 +27,8 @@ enum class ParameterType {
     BOOLEAN,
     ENUM,
     MATERIAL,
-    MATERIAL_LIST
+    MATERIAL_LIST,
+    STRING
 };
 
 enum class ParameterCategory {
@@ -59,6 +60,17 @@ inline viennaps::Material getMaterialFromString(const std::string& matStr) {
         }
     }
     return viennaps::Material::Si; // default
+}
+
+// Resolve a user-supplied material name to a viennaps::Material through the
+// material registry: returns the built-in material if the name matches one,
+// an existing custom material if already registered, or registers a new custom
+// material otherwise. Falls back to SiO2 for an empty name.
+inline viennaps::Material resolveMaterialFromString(const std::string& name) {
+    if (name.empty()) {
+        return viennaps::Material::SiO2;
+    }
+    return viennaps::MaterialRegistry::instance().registerMaterial(name);
 }
 
 inline int getMaterialIndex(viennaps::Material material) {

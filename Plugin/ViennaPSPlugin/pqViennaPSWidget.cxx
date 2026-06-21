@@ -14,6 +14,8 @@
 #include <vtkSMInputProperty.h>
 #include <vtkSMOutputPort.h>
 #include <vtkPVDataInformation.h>
+#include <vtkAlgorithm.h>
+#include "vtkViennaPSDomainObject.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -22,6 +24,7 @@
 #include <QDoubleSpinBox>
 #include <QSpinBox>
 #include <QCheckBox>
+#include <QLineEdit>
 #include <QGroupBox>
 #include <QLabel>
 #include <QPushButton>
@@ -343,6 +346,49 @@ bool pqViennaPSWidget::hasInputDomainInfo()
   return false;
 }
 
+QStringList pqViennaPSWidget::getDomainMaterialNames()
+{
+  QStringList result;
+  if (isSource) {
+    return result;  // sources create the domain, no upstream materials to query
+  }
+
+  vtkSMProxy* smProxy = this->proxy;
+  if (!smProxy) {
+    return result;
+  }
+
+  vtkSMInputProperty* inputProp = vtkSMInputProperty::SafeDownCast(
+    smProxy->GetProperty("Input"));
+  if (!inputProp || inputProp->GetNumberOfProxies() == 0) {
+    return result;
+  }
+
+  vtkSMSourceProxy* inputProxy = vtkSMSourceProxy::SafeDownCast(
+    inputProp->GetProxy(0));
+  if (!inputProxy) {
+    return result;
+  }
+
+  inputProxy->UpdatePipeline();
+
+  vtkAlgorithm* alg = vtkAlgorithm::SafeDownCast(inputProxy->GetClientSideObject());
+  if (!alg) {
+    return result;
+  }
+
+  vtkViennaPSDomainObject* domainObj =
+    vtkViennaPSDomainObject::SafeDownCast(alg->GetOutputDataObject(0));
+  if (!domainObj || !domainObj->HasDomain()) {
+    return result;
+  }
+
+  for (const auto& name : domainObj->GetMaterialNamesInDomain()) {
+    result << QString::fromStdString(name);
+  }
+  return result;
+}
+
 //----------------------------------------------------------------------------
 void pqViennaPSWidget::loadModel(const QString& modelName)
 {
@@ -351,6 +397,10 @@ void pqViennaPSWidget::loadModel(const QString& modelName)
   
   try {
     auto metadata = registry.getModelMetadata(modelName.toStdString());
+
+    // Materials present in the connected input domain (empty if unavailable);
+    // used to restrict material-list choices to what the domain actually holds.
+    QStringList domainMaterials = getDomainMaterialNames();
 
     QMap<QString, QList<ViennaPSMeta::ParameterMetadata>> categorized;
     for (const auto& param : metadata.parameters) {
@@ -429,12 +479,21 @@ void pqViennaPSWidget::loadModel(const QString& modelName)
           case ViennaPSMeta::ParameterType::MATERIAL_LIST:
             {
               QStringList options;
-              for (const auto& [key, value] : param.materialMap) {
-                options << QString::fromStdString(value);
+              if (!domainMaterials.isEmpty()) {
+                options = domainMaterials;
+              } else {
+                for (const auto& [key, value] : param.materialMap) {
+                  options << QString::fromStdString(value);
+                }
               }
               widget = createMaterialListWidget(paramName, options);
             }
           break;
+
+          case ViennaPSMeta::ParameterType::STRING:
+            widget = createStringWidget(paramName,
+                QString::fromStdString(std::get<std::string>(param.defaultValue)));
+            break;
         }
         
         if (widget) {
@@ -537,9 +596,23 @@ QWidget* pqViennaPSWidget::createEnumWidget(const QString& name,
   
   connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
           this, &pqViennaPSWidget::onEnumParameterChanged);
-  
+
   parameterValues[name] = value;
   return comboBox;
+}
+
+QWidget* pqViennaPSWidget::createStringWidget(const QString& name,
+                                              const QString& value)
+{
+  QLineEdit* lineEdit = new QLineEdit(this);
+  lineEdit->setText(value);
+  lineEdit->setObjectName(name);
+
+  connect(lineEdit, &QLineEdit::textChanged,
+          this, &pqViennaPSWidget::onStringParameterChanged);
+
+  parameterValues[name] = value;
+  return lineEdit;
 }
 
 QWidget* pqViennaPSWidget::createMaterialListWidget(const QString& paramName, 
@@ -557,7 +630,9 @@ QWidget* pqViennaPSWidget::createMaterialListWidget(const QString& paramName,
 
     QComboBox* materialCombo = new QComboBox();
     for (int i=0; i< options.length(); i++) {
-        materialCombo->addItem(options.at(i), i);
+        int materialId = static_cast<int>(
+            ViennaPSMeta::resolveMaterialFromString(options.at(i).toStdString()).legacyId());
+        materialCombo->addItem(options.at(i), materialId);
     }
 
     buttonLayout->addWidget(materialCombo);
@@ -656,6 +731,16 @@ void pqViennaPSWidget::onEnumParameterChanged(int index)
   }
 }
 
+void pqViennaPSWidget::onStringParameterChanged(const QString& value)
+{
+  QLineEdit* lineEdit = qobject_cast<QLineEdit*>(sender());
+  if (lineEdit) {
+    QString name = lineEdit->objectName();
+    parameterValues[name] = value;
+    emit changeAvailable();
+  }
+}
+
 //----------------------------------------------------------------------------
 void pqViennaPSWidget::updateParameterVisibility()
 {
@@ -677,29 +762,50 @@ void pqViennaPSWidget::updateParameterVisibility()
 //----------------------------------------------------------------------------
 bool pqViennaPSWidget::evaluateCondition(const QString& condition)
 {
-  // Simple parser for "param==value" conditions
-  if (condition.contains("==")) {
-    QStringList parts = condition.split("==");
-    if (parts.size() == 2) {
-      QString paramName = parts[0].trimmed();
-      QString expectedValue = parts[1].trimmed();
-      
-      if (parameterValues.contains(paramName)) {
-        QVariant currentValue = parameterValues[paramName];
-        
-        if (expectedValue == "true" && currentValue.userType() == QMetaType::Bool) {
-          return currentValue.toBool();
-        }
-        else if (expectedValue == "false" && currentValue.userType() == QMetaType::Bool) {
-          return !currentValue.toBool();
-        }
-        else if (currentValue.userType() == QMetaType::Int) {
-          return currentValue.toInt() == expectedValue.toInt();
-        }
+  // Simple parser for "param <op> value" conditions. Operators are checked
+  // longest-first so ">=" / "<=" are matched before ">" / "<".
+  const QStringList operators = {"==", ">=", "<=", ">", "<"};
+  for (const QString& op : operators) {
+    if (!condition.contains(op)) {
+      continue;
+    }
+    QStringList parts = condition.split(op);
+    if (parts.size() != 2) {
+      continue;
+    }
+    QString paramName = parts[0].trimmed();
+    QString expectedValue = parts[1].trimmed();
+
+    if (!parameterValues.contains(paramName)) {
+      return true;
+    }
+    QVariant currentValue = parameterValues[paramName];
+
+    if (op == "==") {
+      if (expectedValue == "true" && currentValue.userType() == QMetaType::Bool) {
+        return currentValue.toBool();
+      }
+      if (expectedValue == "false" && currentValue.userType() == QMetaType::Bool) {
+        return !currentValue.toBool();
+      }
+      if (currentValue.userType() == QMetaType::Int) {
+        return currentValue.toInt() == expectedValue.toInt();
       }
     }
+
+    bool curOk = false, expOk = false;
+    double cur = currentValue.toDouble(&curOk);
+    double exp = expectedValue.toDouble(&expOk);
+    if (curOk && expOk) {
+      if (op == "==") return cur == exp;
+      if (op == ">")  return cur > exp;
+      if (op == "<")  return cur < exp;
+      if (op == ">=") return cur >= exp;
+      if (op == "<=") return cur <= exp;
+    }
+    return true;
   }
-  
+
   return true;
 }
 
@@ -798,6 +904,13 @@ void pqViennaPSWidget::applyChanges()
           ViennaPSMeta::MaterialListValue matList;
           matList.materialIds = materialIds;
           propertyManager->UpdateParameterValue(paramName, matList);
+        }
+      }
+      else if (it.value().userType() == QMetaType::QString) {
+        std::string val = it.value().toString().toStdString();
+        vtkSource->SetParameterString(paramName.c_str(), val.c_str());
+        if (propertyManager) {
+          propertyManager->UpdateParameterValue(paramName, val);
         }
       }
     }

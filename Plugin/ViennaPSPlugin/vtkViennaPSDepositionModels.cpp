@@ -368,19 +368,11 @@ void registerSingleParticleALDProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-  depositionMaterialParam.documentation =
-      "Material to deposit (e.g., Al2O3, HfO2, TiO2)";
-  depositionMaterialParam.type = ParameterType::ENUM;
-  depositionMaterialParam.defaultValue =
-      static_cast<int>(viennaps::Material::SiO2);
+    depositionMaterialParam.documentation = "Material to deposit (e.g., Al2O3, HfO2, TiO2)";
+    depositionMaterialParam.type = ParameterType::STRING;
+    depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::BASIC;
   depositionMaterialParam.required = false;
-
-  auto materialNames = getAllMaterialNames();
-  depositionMaterialParam.enumOptions = materialNames;
-  for (size_t i = 0; i < materialNames.size(); ++i) {
-    depositionMaterialParam.materialMap[static_cast<int>(i)] = materialNames[i];
-  }
   aldProcess.parameters.push_back(depositionMaterialParam);
 
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
@@ -404,13 +396,10 @@ void registerSingleParticleALDProcessModel() {
     double gasMeanFreePath =
         registry.getParameter<double>(params, "GasMeanFreePath", 0.0);
 
-    viennaps::Material depositionMaterial = viennaps::Material::SiO2;
-    if (params.find("DepositionMaterial") != params.end()) {
-      int matId = registry.getParameter<int>(
-          params, "DepositionMaterial",
-          static_cast<int>(viennaps::Material::SiO2));
-      depositionMaterial = static_cast<viennaps::Material>(matId);
-    }
+        std::string depositionMaterialName =
+            registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+        viennaps::Material depositionMaterial =
+            ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
@@ -594,19 +583,11 @@ void registerTEOSPECVDProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-  depositionMaterialParam.documentation =
-      "Material to deposit (typically SiO2 for TEOS)";
-  depositionMaterialParam.type = ParameterType::ENUM;
-  depositionMaterialParam.defaultValue =
-      static_cast<int>(viennaps::Material::SiO2);
+    depositionMaterialParam.documentation = "Material to deposit (typically SiO2 for TEOS)";
+    depositionMaterialParam.type = ParameterType::STRING;
+    depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::ADVANCED;
   depositionMaterialParam.required = false;
-
-  auto materialNames = getAllMaterialNames();
-  depositionMaterialParam.enumOptions = materialNames;
-  for (size_t i = 0; i < materialNames.size(); ++i) {
-    depositionMaterialParam.materialMap[static_cast<int>(i)] = materialNames[i];
-  }
   teosPECVDProcess.parameters.push_back(depositionMaterialParam);
 
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
@@ -631,13 +612,10 @@ void registerTEOSPECVDProcessModel() {
     double ionMinAngle =
         registry.getParameter<double>(params, "IonMinAngle", 0.0);
 
-    viennaps::Material depositionMaterial = viennaps::Material::SiO2;
-    if (params.find("DepositionMaterial") != params.end()) {
-      int matId = registry.getParameter<int>(
-          params, "DepositionMaterial",
-          static_cast<int>(viennaps::Material::SiO2));
-      depositionMaterial = static_cast<viennaps::Material>(matId);
-    }
+        std::string depositionMaterialName =
+            registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+        viennaps::Material depositionMaterial =
+            ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
@@ -805,19 +783,11 @@ void registerTEOSDepositionProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-  depositionMaterialParam.documentation =
-      "Material to deposit (typically SiO2 for TEOS)";
-  depositionMaterialParam.type = ParameterType::ENUM;
-  depositionMaterialParam.defaultValue =
-      static_cast<int>(viennaps::Material::SiO2);
+    depositionMaterialParam.documentation = "Material to deposit (typically SiO2 for TEOS)";
+    depositionMaterialParam.type = ParameterType::STRING;
+    depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::ADVANCED;
   depositionMaterialParam.required = false;
-
-  auto materialNames = getAllMaterialNames();
-  depositionMaterialParam.enumOptions = materialNames;
-  for (size_t i = 0; i < materialNames.size(); ++i) {
-    depositionMaterialParam.materialMap[static_cast<int>(i)] = materialNames[i];
-  }
   teosProcess.parameters.push_back(depositionMaterialParam);
 
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
@@ -838,13 +808,10 @@ void registerTEOSDepositionProcessModel() {
     double orderP2 =
         registry.getParameter<double>(params, "ReactionOrderP2", 0.0);
 
-    viennaps::Material depositionMaterial = viennaps::Material::SiO2;
-    if (params.find("DepositionMaterial") != params.end()) {
-      int matId = registry.getParameter<int>(
-          params, "DepositionMaterial",
-          static_cast<int>(viennaps::Material::SiO2));
-      depositionMaterial = static_cast<viennaps::Material>(matId);
-    }
+        std::string depositionMaterialName =
+            registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+        viennaps::Material depositionMaterial =
+            ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
