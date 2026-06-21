@@ -730,12 +730,12 @@ void registerSingleParticleProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-    depositionMaterialParam.documentation = "Material to deposit when the rate is positive (built-in name like SiO2, Si3N4, or a custom name)";
-    depositionMaterialParam.type = ParameterType::STRING;
-    depositionMaterialParam.defaultValue = std::string("SiO2");
+  depositionMaterialParam.documentation = "Material to deposit when the rate is positive (built-in name like SiO2, Si3N4, or a custom name)";
+  depositionMaterialParam.type = ParameterType::STRING;
+  depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::BASIC;
   depositionMaterialParam.required = false;
-    depositionMaterialParam.visibilityCondition = "Rate > 0";  // only relevant for deposition
+  depositionMaterialParam.visibilityCondition = "Rate > 0";  // only relevant for deposition
   singleParticleProcess.parameters.push_back(depositionMaterialParam);
 
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
@@ -1043,22 +1043,23 @@ void registerIsotropicProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-    depositionMaterialParam.documentation = "Material to deposit when the rate is positive (built-in name like SiO2, Si3N4, or a custom name)";
-    depositionMaterialParam.type = ParameterType::STRING;
-    depositionMaterialParam.defaultValue = std::string("SiO2");
+  depositionMaterialParam.documentation = "Material to deposit when the rate is positive (built-in name like SiO2, Si3N4, or a custom name)";
+  depositionMaterialParam.type = ParameterType::STRING;
+  depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::BASIC;
   depositionMaterialParam.required = false;
-    depositionMaterialParam.visibilityCondition = "Rate > 0";  // only relevant for deposition
+  depositionMaterialParam.visibilityCondition = "Rate > 0";  // only relevant for deposition
   isotropicProcess.parameters.push_back(depositionMaterialParam);
 
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
                     vtkDataObject *output, const ParameterMap &params) {
     auto &registry = vtkViennaPSModelRegistry::getInstance();
 
-        double processTime = registry.getParameter<double>(params, "ProcessTime", 5.0);
-        double processRate = registry.getParameter<double>(params, "Rate", 4.0);
-        std::string depositionMaterialName =
-            registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+    double processTime =
+        registry.getParameter<double>(params, "ProcessTime", 5.0);
+    double processRate = registry.getParameter<double>(params, "Rate", 4.0);
+    std::string depositionMaterialName =
+        registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {

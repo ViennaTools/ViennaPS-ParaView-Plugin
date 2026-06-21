@@ -368,9 +368,9 @@ void registerSingleParticleALDProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-    depositionMaterialParam.documentation = "Material to deposit (e.g., Al2O3, HfO2, TiO2)";
-    depositionMaterialParam.type = ParameterType::STRING;
-    depositionMaterialParam.defaultValue = std::string("SiO2");
+  depositionMaterialParam.documentation = "Material to deposit (e.g., Al2O3, HfO2, TiO2)";
+  depositionMaterialParam.type = ParameterType::STRING;
+  depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::BASIC;
   depositionMaterialParam.required = false;
   aldProcess.parameters.push_back(depositionMaterialParam);
@@ -396,10 +396,10 @@ void registerSingleParticleALDProcessModel() {
     double gasMeanFreePath =
         registry.getParameter<double>(params, "GasMeanFreePath", 0.0);
 
-        std::string depositionMaterialName =
-            registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
-        viennaps::Material depositionMaterial =
-            ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
+    std::string depositionMaterialName =
+        registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+    viennaps::Material depositionMaterial =
+        ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
@@ -583,9 +583,9 @@ void registerTEOSPECVDProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-    depositionMaterialParam.documentation = "Material to deposit (typically SiO2 for TEOS)";
-    depositionMaterialParam.type = ParameterType::STRING;
-    depositionMaterialParam.defaultValue = std::string("SiO2");
+  depositionMaterialParam.documentation = "Material to deposit (typically SiO2 for TEOS)";
+  depositionMaterialParam.type = ParameterType::STRING;
+  depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::ADVANCED;
   depositionMaterialParam.required = false;
   teosPECVDProcess.parameters.push_back(depositionMaterialParam);
@@ -612,10 +612,10 @@ void registerTEOSPECVDProcessModel() {
     double ionMinAngle =
         registry.getParameter<double>(params, "IonMinAngle", 0.0);
 
-        std::string depositionMaterialName =
-            registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
-        viennaps::Material depositionMaterial =
-            ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
+    std::string depositionMaterialName =
+        registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+    viennaps::Material depositionMaterial =
+        ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
@@ -783,9 +783,9 @@ void registerTEOSDepositionProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-    depositionMaterialParam.documentation = "Material to deposit (typically SiO2 for TEOS)";
-    depositionMaterialParam.type = ParameterType::STRING;
-    depositionMaterialParam.defaultValue = std::string("SiO2");
+  depositionMaterialParam.documentation = "Material to deposit (typically SiO2 for TEOS)";
+  depositionMaterialParam.type = ParameterType::STRING;
+  depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::ADVANCED;
   depositionMaterialParam.required = false;
   teosProcess.parameters.push_back(depositionMaterialParam);
@@ -808,10 +808,10 @@ void registerTEOSDepositionProcessModel() {
     double orderP2 =
         registry.getParameter<double>(params, "ReactionOrderP2", 0.0);
 
-        std::string depositionMaterialName =
-            registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
-        viennaps::Material depositionMaterial =
-            ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
+    std::string depositionMaterialName =
+        registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+    viennaps::Material depositionMaterial =
+        ViennaPSMeta::resolveMaterialFromString(depositionMaterialName);
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
