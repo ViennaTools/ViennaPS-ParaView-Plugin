@@ -79,6 +79,15 @@ void vtkViennaPSParameterInterface::SetParameterMaterialList(const char* name, c
   this->Modified();
 }
 
+void vtkViennaPSParameterInterface::SetParameterString(const char* name, const char* value)
+{
+  if (!name) return;
+
+  std::string paramName(name);
+  PropertyManager->UpdateParameterValue(paramName, std::string(value ? value : ""));
+  this->Modified();
+}
+
 //----------------------------------------------------------------------------
 double vtkViennaPSParameterInterface::GetParameterDouble(const char* name)
 {
@@ -120,6 +129,17 @@ std::vector<int> vtkViennaPSParameterInterface::GetParameterMaterialList(const c
   auto value = PropertyManager->GetParameterValue(std::string(name));
   if (std::holds_alternative<ViennaPSMeta::MaterialListValue>(value)) {
     return std::get<ViennaPSMeta::MaterialListValue>(value).materialIds;
+  }
+  return {};
+}
+
+std::string vtkViennaPSParameterInterface::GetParameterString(const char* name)
+{
+  if (!name) return {};
+
+  auto value = PropertyManager->GetParameterValue(std::string(name));
+  if (std::holds_alternative<std::string>(value)) {
+    return std::get<std::string>(value);
   }
   return {};
 }

@@ -50,6 +50,7 @@ private slots:
   void onIntParameterChanged(int value);
   void onBoolParameterChanged(bool value);
   void onEnumParameterChanged(int index);
+  void onStringParameterChanged(const QString& value);
 
   void updateParameterVisibility();
 
@@ -72,6 +73,7 @@ private:
   QWidget* createBoolWidget(const QString& name, bool value);
   QWidget* createEnumWidget(const QString& name,
                            const QStringList& options, int value);
+  QWidget* createStringWidget(const QString& name, const QString& value);
 
   QWidget* createMaterialListWidget(const QString& name,
                                  const QStringList& options);
@@ -81,6 +83,8 @@ private:
   bool evaluateCondition(const QString& condition);
 
   bool hasInputDomainInfo();
+
+  QStringList getDomainMaterialNames();
 
   QVBoxLayout* mainLayout;
   QComboBox* modelSelector;

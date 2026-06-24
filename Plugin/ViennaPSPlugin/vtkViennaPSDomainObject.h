@@ -5,6 +5,8 @@
 #include <vtkUnstructuredGrid.h>
 #include <vtkSmartPointer.h>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <psDomain.hpp>
 
@@ -43,6 +45,12 @@ public:
 
     int GetDimension() const;
 
+#ifndef __WRAP__
+    // Names of the materials actually present in the stored domain (queried via
+    // viennaps::Domain::getMaterialsInDomain). Empty if no domain is stored.
+    std::vector<std::string> GetMaterialNamesInDomain() const;
+#endif
+
     int GetOutputFormat() const { return this->OutputFormat; }
 
     /**
@@ -72,6 +80,7 @@ private:
         virtual int GetDimension() const = 0;
         virtual size_t GetMemorySize() const = 0;
         virtual void UpdateMesh(vtkUnstructuredGrid* output, int format) = 0;
+        virtual std::vector<std::string> GetMaterialNamesInDomain() const = 0;
     };
 
     template<typename T, int D> struct DomainHolderImpl;

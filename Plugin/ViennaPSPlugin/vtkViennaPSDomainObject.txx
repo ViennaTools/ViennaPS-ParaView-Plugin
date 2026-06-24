@@ -64,6 +64,20 @@ struct vtkViennaPSDomainObject::DomainHolderImpl : vtkViennaPSDomainObject::Doma
         return D;
     }
 
+    std::vector<std::string> GetMaterialNamesInDomain() const override {
+        std::vector<std::string> names;
+        if (!domain) {
+            return names;
+        }
+        const auto& registry = viennaps::MaterialRegistry::instance();
+        for (const auto& material : domain->getMaterialsInDomain()) {
+            if (registry.hasMaterial(material)) {
+                names.push_back(std::string(registry.getName(material)));
+            }
+        }
+        return names;
+    }
+
     size_t GetMemorySize() const override {
         if (!domain) return 0;
 

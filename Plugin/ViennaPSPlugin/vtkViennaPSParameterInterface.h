@@ -29,11 +29,13 @@ public:
   virtual void SetParameterInt(const char* name, int value);
   virtual void SetParameterBool(const char* name, bool value);
   virtual void SetParameterMaterialList(const char* name, const std::vector<int>& values);
+  virtual void SetParameterString(const char* name, const char* value);
 
   virtual double GetParameterDouble(const char* name);
   virtual int GetParameterInt(const char* name);
   virtual bool GetParameterBool(const char* name);
   virtual std::vector<int> GetParameterMaterialList(const char* name);
+  virtual std::string GetParameterString(const char* name);
 
   virtual void InitializeDynamicProperties() = 0;
 

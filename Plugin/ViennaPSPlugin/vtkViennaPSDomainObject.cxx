@@ -101,6 +101,14 @@ int vtkViennaPSDomainObject::GetDimension() const
     return this->Holder ? this->Holder->GetDimension() : -1;
 }
 
+std::vector<std::string> vtkViennaPSDomainObject::GetMaterialNamesInDomain() const
+{
+    if (!this->Holder) {
+        return {};
+    }
+    return this->Holder->GetMaterialNamesInDomain();
+}
+
 //----------------------------------------------------------------------------
 void vtkViennaPSDomainObject::SetOutputFormat(int format)
 {

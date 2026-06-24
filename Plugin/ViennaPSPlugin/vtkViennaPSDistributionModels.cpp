@@ -730,18 +730,12 @@ void registerSingleParticleProcessModel() {
   ParameterMetadata depositionMaterialParam;
   depositionMaterialParam.name = "DepositionMaterial";
   depositionMaterialParam.displayName = "Deposition Material";
-  depositionMaterialParam.documentation =
-      "Material to deposit when rate is positive";
-  depositionMaterialParam.type = ParameterType::ENUM;
-  depositionMaterialParam.defaultValue =
-      static_cast<int>(viennaps::Material::SiO2);
+  depositionMaterialParam.documentation = "Material to deposit when the rate is positive (built-in name like SiO2, Si3N4, or a custom name)";
+  depositionMaterialParam.type = ParameterType::STRING;
+  depositionMaterialParam.defaultValue = std::string("SiO2");
   depositionMaterialParam.category = ParameterCategory::BASIC;
   depositionMaterialParam.required = false;
-
-  depositionMaterialParam.enumOptions = materialNames;
-  for (size_t i = 0; i < materialNames.size(); ++i) {
-    depositionMaterialParam.materialMap[static_cast<int>(i)] = materialNames[i];
-  }
+  depositionMaterialParam.visibilityCondition = "Rate > 0";  // only relevant for deposition
   singleParticleProcess.parameters.push_back(depositionMaterialParam);
 
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
@@ -774,16 +768,10 @@ void registerSingleParticleProcessModel() {
           constexpr int Dim = decltype(dimTag)::value;
 
           if (rate > 0) {
-            viennaps::Material depositionMaterial = viennaps::Material::SiO2;
-
-            if (params.find("DepositionMaterial") != params.end()) {
-              int matId = registry.getParameter<int>(
-                  params, "DepositionMaterial",
-                  static_cast<int>(viennaps::Material::SiO2));
-              depositionMaterial = static_cast<viennaps::Material>(matId);
-            }
-
-            psDomain->duplicateTopLevelSet(depositionMaterial);
+            std::string depositionMaterialName =
+                registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
+            psDomain->duplicateTopLevelSet(
+                ViennaPSMeta::resolveMaterialFromString(depositionMaterialName));
           }
 
           viennaps::SmartPointer<viennaps::ProcessModelCPU<NumericType, Dim>>
@@ -1052,18 +1040,38 @@ void registerIsotropicProcessModel() {
 
   isotropicProcess.parameters.push_back(maskParam);
 
+  ParameterMetadata depositionMaterialParam;
+  depositionMaterialParam.name = "DepositionMaterial";
+  depositionMaterialParam.displayName = "Deposition Material";
+  depositionMaterialParam.documentation = "Material to deposit when the rate is positive (built-in name like SiO2, Si3N4, or a custom name)";
+  depositionMaterialParam.type = ParameterType::STRING;
+  depositionMaterialParam.defaultValue = std::string("SiO2");
+  depositionMaterialParam.category = ParameterCategory::BASIC;
+  depositionMaterialParam.required = false;
+  depositionMaterialParam.visibilityCondition = "Rate > 0";  // only relevant for deposition
+  isotropicProcess.parameters.push_back(depositionMaterialParam);
+
   auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
                     vtkDataObject *output, const ParameterMap &params) {
     auto &registry = vtkViennaPSModelRegistry::getInstance();
 
     double processTime =
         registry.getParameter<double>(params, "ProcessTime", 5.0);
-    double processRate =
-        registry.getParameter<double>(params, "ProcessRate", 1.0);
+    double processRate = registry.getParameter<double>(params, "Rate", 4.0);
+    std::string depositionMaterialName =
+        registry.getParameter<std::string>(params, "DepositionMaterial", "SiO2");
 
     ViennaPSModels::withDomain(
         psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
           constexpr int Dim = decltype(dimTag)::value;
+
+          // Positive rate means deposition: add the selected material on top
+          // of the domain before running the process. Etching or zero-rate
+          // cases keep the existing surface and rely on mask handling below.
+          if (processRate > 0) {
+            psDomain->duplicateTopLevelSet(
+                ViennaPSMeta::resolveMaterialFromString(depositionMaterialName));
+          }
 
           std::vector<viennaps::Material> maskMaterials;
           if (params.find("MaskMaterials") != params.end()) {
@@ -1106,142 +1114,6 @@ void registerIsotropicProcessModel() {
       "IsotropicProcess", isotropicProcess, factory);
 }
 
-void registerCustomSphereDistributionModel() {
-  using namespace ViennaPSMeta;
-
-  ModelMetadata meta;
-  meta.className = "CustomSphereDistribution";
-  meta.displayName = "Custom Sphere Distribution";
-  meta.description = "Deposits or etches a set of concentric spherical shells "
-                     "at user-defined radii";
-  meta.type = ModelType::PROCESS;
-
-  ParameterMetadata numRadiiParam;
-  numRadiiParam.name = "NumberOfRadii";
-  numRadiiParam.displayName = "Number of Radii";
-  numRadiiParam.documentation = "How many concentric sphere radii to use (1-5)";
-  numRadiiParam.type = ParameterType::INTEGER;
-  numRadiiParam.defaultValue = 2;
-  numRadiiParam.minValue = 1;
-  numRadiiParam.maxValue = 5;
-  numRadiiParam.category = ParameterCategory::BASIC;
-  numRadiiParam.required = true;
-  meta.parameters.push_back(numRadiiParam);
-
-  const std::array<double, 5> defaultRadii = {5.0, 10.0, 15.0, 20.0, 25.0};
-  for (int i = 1; i <= 5; ++i) {
-    ParameterMetadata rParam;
-    rParam.name = "Radius" + std::to_string(i);
-    rParam.displayName = "Radius " + std::to_string(i);
-    rParam.documentation =
-        "Radius of sphere shell " + std::to_string(i) + " (nm)";
-    rParam.type = ParameterType::DOUBLE;
-    rParam.defaultValue = defaultRadii[i - 1];
-    rParam.minValue = 0.1;
-    rParam.maxValue = 1000.0;
-    rParam.category = ParameterCategory::BASIC;
-    rParam.unit = "";
-    rParam.stepSize = 0.1;
-    rParam.required = (i == 1);
-    meta.parameters.push_back(rParam);
-  }
-
-  ParameterMetadata processTimeParam;
-  processTimeParam.name = "ProcessTime";
-  processTimeParam.displayName = "Process Time";
-  processTimeParam.documentation = "Duration of the process (s)";
-  processTimeParam.type = ParameterType::DOUBLE;
-  processTimeParam.defaultValue = 1.0;
-  processTimeParam.minValue = 0.001;
-  processTimeParam.maxValue = 1000.0;
-  processTimeParam.category = ParameterCategory::BASIC;
-  processTimeParam.unit = "";
-  processTimeParam.stepSize = 0.1;
-  processTimeParam.required = true;
-  meta.parameters.push_back(processTimeParam);
-
-  ParameterMetadata maskParam;
-  maskParam.name = "MaskMaterials";
-  maskParam.displayName = "Materials to mask";
-  maskParam.documentation =
-      "Select materials where the distribution should not be applied";
-  maskParam.type = ParameterType::MATERIAL_LIST;
-  maskParam.defaultValue = MaterialListValue{{}};
-  maskParam.category = ParameterCategory::ADVANCED;
-  maskParam.required = false;
-  {
-    auto materialNames = getAllMaterialNames();
-    maskParam.enumOptions = materialNames;
-    for (size_t i = 0; i < materialNames.size(); ++i) {
-      maskParam.materialMap[static_cast<int>(i)] = materialNames[i];
-    }
-  }
-  meta.parameters.push_back(maskParam);
-
-  auto factory = [](std::shared_ptr<void> psDomainVoid, int dimension,
-                    vtkDataObject *output, const ParameterMap &params) {
-    auto &registry = vtkViennaPSModelRegistry::getInstance();
-
-    int numRadii = registry.getParameter<int>(params, "NumberOfRadii", 2);
-    double processTime =
-        registry.getParameter<double>(params, "ProcessTime", 1.0);
-
-    std::vector<NumericType> radii;
-    for (int i = 1; i <= numRadii; ++i) {
-      double r = registry.getParameter<double>(
-          params, "Radius" + std::to_string(i), 5.0 * i);
-      radii.push_back(static_cast<NumericType>(r));
-    }
-
-    std::vector<viennaps::Material> maskMaterials;
-    if (params.find("MaskMaterials") != params.end()) {
-      auto matList = registry.getParameter<MaterialListValue>(
-          params, "MaskMaterials", MaterialListValue{{}});
-      for (int matId : matList.materialIds) {
-        auto material = static_cast<viennaps::Material>(matId);
-        if (material != viennaps::Material::Undefined) {
-          maskMaterials.push_back(material);
-        }
-      }
-    }
-
-    VPSLOG_INFO(nullptr, "CustomSphereDistributionModel: ",
-                ViennaPSMeta::ParameterMapToString(params));
-
-    ViennaPSModels::withDomain(
-        psDomainVoid, dimension, [&](auto psDomain, auto dimTag) {
-          constexpr int Dim = decltype(dimTag)::value;
-
-          auto model = viennaps::SmartPointer<
-              viennaps::CustomSphereDistribution<NumericType, Dim>>::New(radii);
-          for (const auto &mat : maskMaterials) {
-            model->addMaskMaterial(mat);
-          }
-
-          viennaps::Process<NumericType, Dim> process;
-          process.setDomain(psDomain);
-          process.setProcessModel(model);
-          process.setProcessDuration(processTime);
-
-#ifndef MULTI_STEP
-          process.apply();
-#else
-            const int numSteps = 10;
-            const double stepTime = processTime / numSteps;
-            process.setProcessDuration(stepTime);
-            for (int step = 0; step < numSteps; ++step) {
-                process.apply();
-            }
-#endif
-
-          ViennaPSModels::convertToVTK<Dim>(psDomain, output, params);
-        });
-  };
-
-  vtkViennaPSModelRegistry::getInstance().registerProcessModel(
-      "CustomSphereDistribution", meta, factory);
-}
-
 } // anonymous namespace
 
 void ViennaPSModels::initializeDistributionModels() {
@@ -1251,5 +1123,4 @@ void ViennaPSModels::initializeDistributionModels() {
   registerMultiParticleProcessModel();
   registerSphereDistributionModel();
   registerBoxDistributionModel();
-  registerCustomSphereDistributionModel();
 }
