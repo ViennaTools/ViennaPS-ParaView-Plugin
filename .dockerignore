@@ -1,0 +1,7 @@
+build*
+.git
+*.log
+*.so
+__pycache__
+.vscode
+.idea
