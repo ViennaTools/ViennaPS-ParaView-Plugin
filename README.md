@@ -6,8 +6,8 @@ A ParaView plugin for the [ViennaPS](https://github.com/ViennaTools/ViennaPS) se
 ## Dependencies
 
 - ParaView 6.1 (built from source, with Qt6 and Python)
-- ViennaPS 4.4.0, ViennaCore 2.1.2, ViennaLS 5.7.2, ViennaRay 4.1.2
-- ViennaCS 2.0.1, ViennaHRLE 1.0.0, Embree 4
+- ViennaPS 4.6.1, ViennaCore 2.2.1, ViennaLS 5.8.3, ViennaRay 4.3.1
+- ViennaCS 2.0.1, ViennaHRLE 1.1.2, Embree 4
 - C++20 compiler, CMake, OpenMP
 
 `CMakeLists.txt` expects ParaView and the Vienna libraries to be reachable via CMake's find mechanism. Point it to your local installs through the variables below.

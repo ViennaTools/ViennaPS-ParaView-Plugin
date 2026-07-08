@@ -337,18 +337,49 @@ void registerSingleParticleALDProcessModel() {
   aldProcess.parameters.push_back(inFluxParam);
 
   ParameterMetadata s0Param;
-  s0Param.name = "SaturationCoverage";
-  s0Param.displayName = "Saturation Coverage";
-  s0Param.documentation = "Surface saturation coverage density";
+  s0Param.name = "S0";
+  s0Param.displayName = "Surface Site Density";
+  s0Param.documentation = "Surface site density (s0) available for adsorption";
   s0Param.type = ParameterType::DOUBLE;
   s0Param.defaultValue = 1.0;
-  s0Param.minValue = 0.1;
-  s0Param.maxValue = 10.0;
+  s0Param.minValue = 0.0;
+  s0Param.maxValue = 1000.0;
   s0Param.category = ParameterCategory::ADVANCED;
   s0Param.unit = "";
   s0Param.stepSize = 0.1;
   s0Param.required = false;
   aldProcess.parameters.push_back(s0Param);
+
+  ParameterMetadata coverageDiffusionParam;
+  coverageDiffusionParam.name = "CoverageDiffusionCoefficient";
+  coverageDiffusionParam.displayName = "Coverage Diffusion Coefficient";
+  coverageDiffusionParam.documentation =
+      "Surface diffusion coefficient for coverage. 0 = no surface diffusion";
+  coverageDiffusionParam.type = ParameterType::DOUBLE;
+  coverageDiffusionParam.defaultValue = 0.0;
+  coverageDiffusionParam.minValue = 0.0;
+  coverageDiffusionParam.maxValue = 100.0;
+  coverageDiffusionParam.category = ParameterCategory::ADVANCED;
+  coverageDiffusionParam.unit = "";
+  coverageDiffusionParam.stepSize = 0.1;
+  coverageDiffusionParam.required = false;
+  aldProcess.parameters.push_back(coverageDiffusionParam);
+
+  ParameterMetadata pulseTimeParam;
+  pulseTimeParam.name = "PulseTime";
+  pulseTimeParam.displayName = "Pulse Time";
+  pulseTimeParam.documentation =
+      "Precursor pulse time per ALD cycle (surface coverage is integrated "
+      "over this duration)";
+  pulseTimeParam.type = ParameterType::DOUBLE;
+  pulseTimeParam.defaultValue = 1.0;
+  pulseTimeParam.minValue = 0.0001;
+  pulseTimeParam.maxValue = 100.0;
+  pulseTimeParam.category = ParameterCategory::BASIC;
+  pulseTimeParam.unit = "";
+  pulseTimeParam.stepSize = 0.01;
+  pulseTimeParam.required = true;
+  aldProcess.parameters.push_back(pulseTimeParam);
 
   ParameterMetadata gasMFPParam;
   gasMFPParam.name = "GasMeanFreePath";
@@ -391,8 +422,10 @@ void registerSingleParticleALDProcessModel() {
         registry.getParameter<double>(params, "EvaporationFlux", 0.0);
     double incomingFlux =
         registry.getParameter<double>(params, "IncomingFlux", 1.0);
-    double saturationCoverage =
-        registry.getParameter<double>(params, "SaturationCoverage", 1.0);
+    double s0 = registry.getParameter<double>(params, "S0", 1.0);
+    double coverageDiffusionCoefficient = registry.getParameter<double>(
+        params, "CoverageDiffusionCoefficient", 0.0);
+    double pulseTime = registry.getParameter<double>(params, "PulseTime", 1.0);
     double gasMeanFreePath =
         registry.getParameter<double>(params, "GasMeanFreePath", 0.0);
 
@@ -407,11 +440,21 @@ void registerSingleParticleALDProcessModel() {
 
           psDomain->duplicateTopLevelSet(depositionMaterial);
 
+          double scaledGrowthPerCycle =
+              static_cast<double>(totalCycles) / numCycles * growthPerCycle;
+
+          viennaps::SingleParticleALDParams aldParams;
+          aldParams.stickingProbability = stickingProbability;
+          aldParams.gasMeanFreePath = gasMeanFreePath;
+          aldParams.growthPerCycle = scaledGrowthPerCycle;
+          aldParams.evaporationFlux = evaporationFlux;
+          aldParams.incomingFlux = incomingFlux;
+          aldParams.s0 = s0;
+          aldParams.coverageDiffusionCoefficient = coverageDiffusionCoefficient;
+
           auto model = viennaps::
               SmartPointer<viennaps::SingleParticleALD<NumericType, Dim>>::New(
-                  stickingProbability, numCycles, growthPerCycle, totalCycles,
-                  coverageTimeStep, evaporationFlux, incomingFlux,
-                  saturationCoverage, gasMeanFreePath);
+                  aldParams);
 
           VPSLOG_DEBUG(nullptr, "Sticking probability: ", stickingProbability);
           VPSLOG_DEBUG(nullptr, "Growth per cycle: ", growthPerCycle,
@@ -421,7 +464,12 @@ void registerSingleParticleALDProcessModel() {
           VPSLOG_DEBUG(nullptr, "Coverage time step: ", coverageTimeStep, " s");
           VPSLOG_DEBUG(nullptr, "Incoming flux: ", incomingFlux);
           VPSLOG_DEBUG(nullptr, "Evaporation flux: ", evaporationFlux);
-          VPSLOG_DEBUG(nullptr, "Saturation coverage: ", saturationCoverage);
+          VPSLOG_DEBUG(nullptr, "Surface site density (s0): ", s0);
+          VPSLOG_DEBUG(nullptr, "Coverage diffusion coefficient: ",
+                       coverageDiffusionCoefficient);
+          VPSLOG_DEBUG(nullptr, "Pulse time: ", pulseTime, " s");
+          VPSLOG_DEBUG(nullptr, "Scaled growth per cycle: ", scaledGrowthPerCycle,
+                       " nm/cycle");
           if (gasMeanFreePath > 0) {
             VPSLOG_DEBUG(nullptr, "Gas mean free path: ", gasMeanFreePath,
                          " nm");
@@ -444,8 +492,13 @@ void registerSingleParticleALDProcessModel() {
             process.setParameters(rayParams);
           }
 
-          process.setProcessDuration(
-              1.0); // Unit time, actual growth controlled by cycles
+          {
+            viennaps::AtomicLayerProcessParameters alpParams;
+            alpParams.numCycles = static_cast<unsigned>(numCycles);
+            alpParams.pulseTime = pulseTime;
+            alpParams.coverageTimeStep = coverageTimeStep;
+            process.setParameters(alpParams);
+          }
 
           process.apply();
 
