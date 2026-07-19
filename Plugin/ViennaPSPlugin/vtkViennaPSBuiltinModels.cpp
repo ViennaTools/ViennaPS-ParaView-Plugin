@@ -6,6 +6,7 @@ void vtkViennaPSModelRegistry::initializeBuiltinModels(bool geometry) {
   } else {
     ViennaPSModels::initializeEtchingModels();
     ViennaPSModels::initializeDepositionModels();
-    ViennaPSModels::initializeDistributionModels();
+    ViennaPSModels::initializeEmulationModels();
+    ViennaPSModels::initializeSimulationModels();
   }
 }

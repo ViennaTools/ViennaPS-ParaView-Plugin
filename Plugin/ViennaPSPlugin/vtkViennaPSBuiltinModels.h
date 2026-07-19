@@ -18,8 +18,6 @@ namespace ViennaPSModels {
 using NumericType = ViennaPSMeta::NumericType;
 constexpr int D = ViennaPSMeta::D;
 
-// Dispatch helper: calls `fn(typedDomain, dimTag)` with the correct dimension.
-// `dimTag` is std::integral_constant<int, Dim> so Dim is available at compile time.
 template<typename Fn>
 void withDomain(std::shared_ptr<void> psDomainVoid, int dimension, Fn&& fn) {
     if (dimension == 2) {
@@ -49,8 +47,9 @@ void convertToVTK(
 void initializeGeometryModels();
 void initializeEtchingModels();
 void initializeDepositionModels();
-void initializeDistributionModels();
+void initializeEmulationModels();
+void initializeSimulationModels();
 
-} // namespace ViennaPSModels
+}
 
 #endif

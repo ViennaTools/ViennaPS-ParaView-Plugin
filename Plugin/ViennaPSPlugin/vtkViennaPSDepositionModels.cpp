@@ -19,7 +19,7 @@ void registerSelectiveEpitaxyProcessModel() {
   epitaxyProcess.displayName = "Selective Epitaxy";
   epitaxyProcess.description = "Selective epitaxial growth model with crystal "
                                "orientation-dependent rates";
-  epitaxyProcess.type = ModelType::PROCESS;
+  epitaxyProcess.type = ModelType::EMULATION;
 
   ParameterMetadata epitaxyMaterialsParam;
   epitaxyMaterialsParam.name = "EpitaxyMaterials";
@@ -198,12 +198,6 @@ void registerSelectiveEpitaxyProcessModel() {
           viennaps::Process<NumericType, Dim> process;
           process.setDomain(psDomain);
           process.setProcessModel(model);
-          {
-            viennaps::RayTracingParameters rayParams;
-            rayParams.raysPerPoint = static_cast<unsigned>(
-                registry.getParameter<int>(params, "NumRaysPerPoint", 1000));
-            process.setParameters(rayParams);
-          }
 
 #ifndef MULTI_STEP
           process.setProcessDuration(processTime);
@@ -234,7 +228,7 @@ void registerSingleParticleALDProcessModel() {
   aldProcess.displayName = "Single Particle ALD";
   aldProcess.description = "Atomic Layer Deposition model with single particle "
                            "species and surface coverage dynamics";
-  aldProcess.type = ModelType::PROCESS;
+  aldProcess.type = ModelType::SIMULATION;
 
   ParameterMetadata stickingParam;
   stickingParam.name = "StickingProbability";
@@ -506,6 +500,8 @@ void registerSingleParticleALDProcessModel() {
         });
   };
 
+  aldProcess.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "SingleParticleALD", aldProcess, factory);
 }
@@ -518,7 +514,7 @@ void registerTEOSPECVDProcessModel() {
   teosPECVDProcess.displayName = "TEOS PECVD";
   teosPECVDProcess.description = "Plasma-enhanced chemical vapor deposition of "
                                  "TEOS with radical and ion contributions";
-  teosPECVDProcess.type = ModelType::PROCESS;
+  teosPECVDProcess.type = ModelType::SIMULATION;
 
   ParameterMetadata radicalStickingParam;
   radicalStickingParam.name = "RadicalSticking";
@@ -720,6 +716,8 @@ void registerTEOSPECVDProcessModel() {
         });
   };
 
+  teosPECVDProcess.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "TEOSPECVD", teosPECVDProcess, factory);
 }
@@ -732,7 +730,7 @@ void registerTEOSDepositionProcessModel() {
   teosProcess.displayName = "TEOS Deposition";
   teosProcess.description =
       "Tetraethyl orthosilicate (TEOS) deposition model for SiO2 film growth";
-  teosProcess.type = ModelType::PROCESS;
+  teosProcess.type = ModelType::SIMULATION;
 
   ParameterMetadata modelTypeParam;
   modelTypeParam.name = "ModelType";
@@ -929,6 +927,8 @@ void registerTEOSDepositionProcessModel() {
           ViennaPSModels::convertToVTK<Dim>(psDomain, output, params);
         });
   };
+
+  teosProcess.parameters.push_back(makeNumRaysPerPointParam());
 
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "TEOSDeposition", teosProcess, factory);
