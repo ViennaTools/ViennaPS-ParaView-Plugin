@@ -62,10 +62,6 @@ inline viennaps::Material getMaterialFromString(const std::string& matStr) {
     return viennaps::Material::Si; // default
 }
 
-// Resolve a user-supplied material name to a viennaps::Material through the
-// material registry: returns the built-in material if the name matches one,
-// an existing custom material if already registered, or registers a new custom
-// material otherwise. Falls back to SiO2 for an empty name.
 inline viennaps::Material resolveMaterialFromString(const std::string& name) {
     if (name.empty()) {
         return viennaps::Material::SiO2;
@@ -107,7 +103,6 @@ struct ParameterMetadata {
 
     ParameterCategory category;
 
-    // Boolean expression evaluated against other parameters, e.g. "makeMask==true".
     std::string visibilityCondition;
 
     std::string unit;
@@ -117,9 +112,28 @@ struct ParameterMetadata {
     bool required = true;
 };
 
+inline ParameterMetadata makeNumRaysPerPointParam() {
+    ParameterMetadata p;
+    p.name = "NumRaysPerPoint";
+    p.displayName = "Rays Per Point";
+    p.documentation =
+        "Number of rays traced per surface point for Monte-Carlo particle "
+        "transport. Higher values reduce statistical noise at the cost of "
+        "runtime.";
+    p.type = ParameterType::INTEGER;
+    p.defaultValue = 1000;
+    p.minValue = 1;
+    p.maxValue = 100000;
+    p.category = ParameterCategory::ADVANCED;
+    p.stepSize = 100;
+    p.required = false;
+    return p;
+}
+
 enum class ModelType {
     GEOMETRY,
-    PROCESS
+    EMULATION,
+    SIMULATION
 };
 
 struct ModelMetadata {
@@ -182,7 +196,10 @@ inline std::string ModelMetadataToString(const ModelMetadata& model, const std::
     oss << "  Class Name: " << model.className << std::endl;
     oss << "  Display Name: " << model.displayName << std::endl;
     oss << "  Description: " << model.description << std::endl;
-    oss << "  Type: " << (model.type == ModelType::GEOMETRY ? "GEOMETRY" : "PROCESS") << std::endl;
+    const char* typeStr = model.type == ModelType::GEOMETRY   ? "GEOMETRY"
+                        : model.type == ModelType::EMULATION  ? "EMULATION"
+                                                              : "SIMULATION";
+    oss << "  Type: " << typeStr << std::endl;
     oss << "  Parameters (" << model.parameters.size() << "):" << std::endl;
     
     for (size_t i = 0; i < model.parameters.size(); ++i) {

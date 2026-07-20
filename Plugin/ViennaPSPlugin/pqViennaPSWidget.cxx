@@ -30,6 +30,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QListWidgetItem>
+#include <QStandardItemModel>
 
 #include <pqApplicationCore.h>
 #include <pqServerManagerModel.h>
@@ -45,7 +46,6 @@ pqViennaPSWidget::pqViennaPSWidget(vtkSMProxy* smProxy,
   initialize();
 }
 
-//----------------------------------------------------------------------------
 pqViennaPSWidget::pqViennaPSWidget(vtkSMProxy* smProxy, 
                                    vtkSMProperty* smProperty,
                                    QWidget* parentObject)
@@ -74,15 +74,35 @@ void pqViennaPSWidget::initialize()
   modelSelector->setToolTip(isSource ? "Select the geometry model to create"
                                      : "Select process to apply");
 
-  auto models = isSource ? registry.getGeometryModelNames() : registry.getProcessModelNames();
-  for (const auto& modelName : models) {
-    auto metadata = registry.getModelMetadata(modelName);
-    modelSelector->addItem(QString::fromStdString(metadata.displayName),
-                          QString::fromStdString(modelName));
-  }
+  if (isSource) {
+    for (const auto& modelName : registry.getGeometryModelNames()) {
+      auto metadata = registry.getModelMetadata(modelName);
+      modelSelector->addItem(QString::fromStdString(metadata.displayName),
+                            QString::fromStdString(modelName));
+    }
+  } else {
+    auto addGroup = [&](const QString& header, ViennaPSMeta::ModelType type) {
+      bool headerAdded = false;
+      for (const auto& modelName : registry.getProcessModelNames()) {
+        auto metadata = registry.getModelMetadata(modelName);
+        if (metadata.type != type) continue;
+        if (!headerAdded) {
+          modelSelector->addItem(header);  // no userData => header row
+          if (auto* m = qobject_cast<QStandardItemModel*>(modelSelector->model())) {
+            if (auto* item = m->item(modelSelector->count() - 1))
+              item->setEnabled(false);
+          }
+          headerAdded = true;
+        }
+        modelSelector->addItem(QString::fromStdString(metadata.displayName),
+                              QString::fromStdString(modelName));
+      }
+    };
+    addGroup("\xE2\x80\x94 Emulation (analytical) \xE2\x80\x94",
+             ViennaPSMeta::ModelType::EMULATION);
+    addGroup("\xE2\x80\x94 Simulation (ray tracing) \xE2\x80\x94",
+             ViennaPSMeta::ModelType::SIMULATION);
 
-  // Default the process selector to IsotropicProcess when available.
-  if (!isSource) {
     int isoIdx = modelSelector->findData(QString::fromStdString("IsotropicProcess"));
     if (isoIdx >= 0)
       modelSelector->setCurrentIndex(isoIdx);
@@ -137,12 +157,6 @@ void pqViennaPSWidget::initialize()
     processTimeSpinBox->setToolTip("Simulation time for the process (in consistent domain units)");
     commonProcessForm->addRow("Process Time:", processTimeSpinBox);
 
-    numRaysSpinBox = new QSpinBox(this);
-    numRaysSpinBox->setRange(1, 100000);
-    numRaysSpinBox->setSingleStep(100);
-    numRaysSpinBox->setValue(1000);
-    numRaysSpinBox->setToolTip("Number of rays per surface point for ray tracing. Higher = more accurate but slower. Ignored by analytic models.");
-    commonProcessForm->addRow("Rays Per Point:", numRaysSpinBox);
 
     mainLayout->addWidget(commonProcessGroup);
   }
@@ -184,8 +198,6 @@ void pqViennaPSWidget::initialize()
   this, [this]() { emit changeAvailable(); });
   if (! isSource) {
     connect(processTimeSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-    this, [this]() { emit changeAvailable(); });
-    connect(numRaysSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
     this, [this]() { emit changeAvailable(); });
   }
   connect(outputFormatComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
@@ -246,16 +258,31 @@ pqPropertyWidget* pqViennaPSWidget::createWidget(vtkSMProxy* proxy,
   return nullptr;
 }
 
-//----------------------------------------------------------------------------
 pqViennaPSWidget::~pqViennaPSWidget() = default;
 
 static bool dummy = false;
-//----------------------------------------------------------------------------
+
+int pqViennaPSWidget::modelRegistryIndex(const QString& modelName) const
+{
+  auto& registry = vtkViennaPSModelRegistry::getInstance();
+  auto names = isSource ? registry.getGeometryModelNames()
+                        : registry.getProcessModelNames();
+  std::string target = modelName.toStdString();
+  for (int i = 0; i < static_cast<int>(names.size()); ++i) {
+    if (names[i] == target)
+      return i;
+  }
+  return 0;
+}
+
 void pqViennaPSWidget::onModelChanged(int index)
 {
   if (index < 0) return;
-  
+
   QString modelName = modelSelector->itemData(index).toString();
+  if (modelName.isEmpty()) {
+    return;
+  }
   VPSLOG_DEBUG(nullptr, "Model changed to: ", modelName.toStdString());
 
   clearParameterWidgets();
@@ -271,8 +298,8 @@ void pqViennaPSWidget::onModelChanged(int index)
         vtkViennaPSParameterInterface::SafeDownCast(obj);
       
       if (vtkSource) {
-        vtkSource->SetModelType(index);
-        
+        vtkSource->SetModelType(modelRegistryIndex(modelName));
+
         auto propertyManager = vtkSource->GetPropertyManager();
         if (propertyManager) {
           propertyManager->OnModelChanged(modelName.toStdString());
@@ -286,7 +313,6 @@ void pqViennaPSWidget::onModelChanged(int index)
   emit changeAvailable();
 }
 
-//----------------------------------------------------------------------------
 bool pqViennaPSWidget::hasInputDomainInfo()
 {
   if (isSource) {
@@ -389,7 +415,6 @@ QStringList pqViennaPSWidget::getDomainMaterialNames()
   return result;
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::loadModel(const QString& modelName)
 {
   currentModel = modelName;
@@ -519,7 +544,6 @@ void pqViennaPSWidget::loadModel(const QString& modelName)
   }
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::clearParameterWidgets()
 {
   while (modelForm->rowCount() > 0) {
@@ -531,7 +555,6 @@ void pqViennaPSWidget::clearParameterWidgets()
   parameterValues.clear();
 }
 
-//----------------------------------------------------------------------------
 QWidget* pqViennaPSWidget::createDoubleWidget(const QString& name,
                                               double value,
                                               double min, double max,
@@ -554,7 +577,6 @@ QWidget* pqViennaPSWidget::createDoubleWidget(const QString& name,
   return spinBox;
 }
 
-//----------------------------------------------------------------------------
 QWidget* pqViennaPSWidget::createIntWidget(const QString& name,
                                           int value, int min, int max)
 {
@@ -570,7 +592,6 @@ QWidget* pqViennaPSWidget::createIntWidget(const QString& name,
   return spinBox;
 }
 
-//----------------------------------------------------------------------------
 QWidget* pqViennaPSWidget::createBoolWidget(const QString& name, bool value)
 {
   QCheckBox* checkBox = new QCheckBox(this);
@@ -584,7 +605,6 @@ QWidget* pqViennaPSWidget::createBoolWidget(const QString& name, bool value)
   return checkBox;
 }
 
-//----------------------------------------------------------------------------
 QWidget* pqViennaPSWidget::createEnumWidget(const QString& name,
                                            const QStringList& options,
                                            int value)
@@ -684,7 +704,6 @@ QWidget* pqViennaPSWidget::createMaterialListWidget(const QString& paramName,
     return container;
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::onDoubleParameterChanged(double value)
 {
   QDoubleSpinBox* spinBox = qobject_cast<QDoubleSpinBox*>(sender());
@@ -696,7 +715,6 @@ void pqViennaPSWidget::onDoubleParameterChanged(double value)
   }
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::onIntParameterChanged(int value)
 {
   QSpinBox* spinBox = qobject_cast<QSpinBox*>(sender());
@@ -708,7 +726,6 @@ void pqViennaPSWidget::onIntParameterChanged(int value)
   }
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::onBoolParameterChanged(bool value)
 {
   QCheckBox* checkBox = qobject_cast<QCheckBox*>(sender());
@@ -720,7 +737,6 @@ void pqViennaPSWidget::onBoolParameterChanged(bool value)
   }
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::onEnumParameterChanged(int index)
 {
   QComboBox* comboBox = qobject_cast<QComboBox*>(sender());
@@ -741,7 +757,6 @@ void pqViennaPSWidget::onStringParameterChanged(const QString& value)
   }
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::updateParameterVisibility()
 {
   for (auto it = parameterWidgets.begin(); it != parameterWidgets.end(); ++it) {
@@ -759,7 +774,6 @@ void pqViennaPSWidget::updateParameterVisibility()
   }
 }
 
-//----------------------------------------------------------------------------
 bool pqViennaPSWidget::evaluateCondition(const QString& condition)
 {
   // Simple parser for "param <op> value" conditions. Operators are checked
@@ -809,7 +823,6 @@ bool pqViennaPSWidget::evaluateCondition(const QString& condition)
   return true;
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::updateDomainSettingsVisibility()
 {
   if (!commonParamsGroup) {
@@ -825,14 +838,12 @@ void pqViennaPSWidget::updateDomainSettingsVisibility()
   }
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::apply()
 {
   applyChanges();
   Superclass::apply();
 }
 
-//----------------------------------------------------------------------------
 void pqViennaPSWidget::applyChanges()
 {
   if (!proxy) return;
@@ -845,7 +856,9 @@ void pqViennaPSWidget::applyChanges()
     vtkViennaPSParameterInterface::SafeDownCast(obj);
   
   if (vtkSource) {
-    vtkSource->SetModelType(modelSelector->currentIndex());
+    QString curName =
+      modelSelector->itemData(modelSelector->currentIndex()).toString();
+    vtkSource->SetModelType(modelRegistryIndex(curName));
 
     // Set domain settings only for GeometrySource
     vtkViennaPSGeometrySource* geometrySource =
@@ -920,12 +933,6 @@ void pqViennaPSWidget::applyChanges()
       vtkSource->SetParameterDouble("ProcessTime", processTime);
       if (propertyManager) {
         propertyManager->UpdateParameterValue("ProcessTime", processTime);
-      }
-
-      int numRays = numRaysSpinBox->value();
-      vtkSource->SetParameterInt("NumRaysPerPoint", numRays);
-      if (propertyManager) {
-        propertyManager->UpdateParameterValue("NumRaysPerPoint", numRays);
       }
     }
 

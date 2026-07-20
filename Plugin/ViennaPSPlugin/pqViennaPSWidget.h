@@ -80,6 +80,8 @@ private:
 
   void loadModel(const QString& modelName);
 
+  int modelRegistryIndex(const QString& modelName) const;
+
   bool evaluateCondition(const QString& condition);
 
   bool hasInputDomainInfo();
@@ -104,7 +106,6 @@ private:
   QDoubleSpinBox* yExtentSpinBox;
   QComboBox* targetDimensionComboBox;
   QDoubleSpinBox* processTimeSpinBox;
-  QSpinBox* numRaysSpinBox;
   QComboBox* outputFormatComboBox;
 
   QString currentModel;

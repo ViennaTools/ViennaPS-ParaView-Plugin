@@ -9,7 +9,8 @@ set(classes
     vtkViennaPSLogger)
 
 set(sources vtkViennaPSBuiltinModels.cpp vtkViennaPSGeometryModels.cpp vtkViennaPSEtchingModels.cpp
-            vtkViennaPSDepositionModels.cpp vtkViennaPSDistributionModels.cpp)
+            vtkViennaPSDepositionModels.cpp vtkViennaPSEmulationModels.cpp
+            vtkViennaPSSimulationModels.cpp)
 
 vtk_module_add_module(ViennaPSPlugin FORCE_STATIC CLASSES ${classes} SOURCES ${sources})
 

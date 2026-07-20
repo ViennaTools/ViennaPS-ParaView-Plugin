@@ -32,7 +32,7 @@ void registerWetEtchingProcessModel() {
   wetEtchingProcess.description =
       "Anisotropic wet etching model for crystalline materials (e.g., Si in "
       "KOH/TMAH)";
-  wetEtchingProcess.type = ModelType::PROCESS;
+  wetEtchingProcess.type = ModelType::EMULATION;
 
   ParameterMetadata etchMaterialsParam;
   etchMaterialsParam.name = "EtchMaterials";
@@ -282,12 +282,6 @@ void registerWetEtchingProcessModel() {
           viennaps::Process<NumericType, Dim> process;
           process.setDomain(psDomain);
           process.setProcessModel(model);
-          {
-            viennaps::RayTracingParameters rayParams;
-            rayParams.raysPerPoint = static_cast<unsigned>(
-                registry.getParameter<int>(params, "NumRaysPerPoint", 1000));
-            process.setParameters(rayParams);
-          }
 
 #ifndef MULTI_STEP
           process.setProcessDuration(processTime);
@@ -318,7 +312,7 @@ void registerSF6O2EtchingProcessModel() {
   sf6o2Process.displayName = "SF6/O2 Plasma Etching";
   sf6o2Process.description =
       "SF6/O2 plasma etching model for Si with oxygen passivation";
-  sf6o2Process.type = ModelType::PROCESS;
+  sf6o2Process.type = ModelType::SIMULATION;
 
   ParameterMetadata ionFluxParam;
   ionFluxParam.name = "IonFlux";
@@ -628,6 +622,8 @@ void registerSF6O2EtchingProcessModel() {
         });
   };
 
+  sf6o2Process.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "SF6O2Etching", sf6o2Process, factory);
 }
@@ -640,7 +636,7 @@ void registerSF6C4F8EtchingProcessModel() {
   sf6c4f8Process.displayName = "SF6/C4F8 Plasma Etching";
   sf6c4f8Process.description = "SF6/C4F8 plasma etching model for Si with "
                                "polymer layer etching (no passivation)";
-  sf6c4f8Process.type = ModelType::PROCESS;
+  sf6c4f8Process.type = ModelType::SIMULATION;
 
   ParameterMetadata ionFluxParam;
   ionFluxParam.name = "IonFlux";
@@ -936,6 +932,8 @@ void registerSF6C4F8EtchingProcessModel() {
         });
   };
 
+  sf6c4f8Process.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "SF6C4F8Etching", sf6c4f8Process, factory);
 }
@@ -948,7 +946,7 @@ void registerIonBeamEtchingProcessModel() {
   ionBeamProcess.displayName = "Ion Beam Etching";
   ionBeamProcess.description =
       "Physical ion beam etching with optional redeposition";
-  ionBeamProcess.type = ModelType::PROCESS;
+  ionBeamProcess.type = ModelType::SIMULATION;
 
   ParameterMetadata planeRateParam;
   planeRateParam.name = "PlaneWaferRate";
@@ -1387,6 +1385,8 @@ void registerIonBeamEtchingProcessModel() {
         });
   };
 
+  ionBeamProcess.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "IonBeamEtching", ionBeamProcess, factory);
 }
@@ -1399,7 +1399,7 @@ void registerHBrO2EtchingProcessModel() {
   hbro2Process.displayName = "HBr/O2 Plasma Etching";
   hbro2Process.description =
       "HBr/O2 plasma etching model for Si with passivation";
-  hbro2Process.type = ModelType::PROCESS;
+  hbro2Process.type = ModelType::SIMULATION;
 
   ParameterMetadata ionFluxParam;
   ionFluxParam.name = "IonFlux";
@@ -1708,6 +1708,8 @@ void registerHBrO2EtchingProcessModel() {
         });
   };
 
+  hbro2Process.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "HBrO2Etching", hbro2Process, factory);
 }
@@ -1720,7 +1722,7 @@ void registerFluorocarbonEtchingProcessModel() {
   fluorocarbonProcess.displayName = "Fluorocarbon Plasma Etching";
   fluorocarbonProcess.description = "Fluorocarbon plasma etching model for "
                                     "SiO2, Si, Si3N4 with polymer deposition";
-  fluorocarbonProcess.type = ModelType::PROCESS;
+  fluorocarbonProcess.type = ModelType::SIMULATION;
 
   ParameterMetadata ionFluxParam;
   ionFluxParam.name = "IonFlux";
@@ -2062,6 +2064,8 @@ void registerFluorocarbonEtchingProcessModel() {
         });
   };
 
+  fluorocarbonProcess.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "FluorocarbonEtching", fluorocarbonProcess, factory);
 }
@@ -2074,7 +2078,7 @@ void registerCF4O2EtchingProcessModel() {
   cf4o2Process.displayName = "CF4/O2 Plasma Etching";
   cf4o2Process.description = "Advanced plasma etching model with CF4/O2 "
                              "chemistry for Si and SiGe etching";
-  cf4o2Process.type = ModelType::PROCESS;
+  cf4o2Process.type = ModelType::SIMULATION;
 
   ParameterMetadata ionFluxParam;
   ionFluxParam.name = "IonFlux";
@@ -2383,6 +2387,8 @@ void registerCF4O2EtchingProcessModel() {
         });
   };
 
+  cf4o2Process.parameters.push_back(makeNumRaysPerPointParam());
+
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "CF4O2Etching", cf4o2Process, factory);
 }
@@ -2395,7 +2401,7 @@ void registerFaradayCageEtchingProcessModel() {
   faradayCageProcess.displayName = "Faraday Cage Etching";
   faradayCageProcess.description =
       "Ion beam etching through a Faraday cage with two-directional ion source";
-  faradayCageProcess.type = ModelType::PROCESS;
+  faradayCageProcess.type = ModelType::SIMULATION;
 
   ParameterMetadata cageAngleParam;
   cageAngleParam.name = "CageAngle";
@@ -2849,6 +2855,8 @@ void registerFaradayCageEtchingProcessModel() {
           ViennaPSModels::convertToVTK<Dim>(psDomain, output, params);
         });
   };
+
+  faradayCageProcess.parameters.push_back(makeNumRaysPerPointParam());
 
   vtkViennaPSModelRegistry::getInstance().registerProcessModel(
       "FaradayCageEtching", faradayCageProcess, factory);
