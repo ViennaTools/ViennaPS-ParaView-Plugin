@@ -1,0 +1,31 @@
+# Builds the plugin inside the prebuilt :dev image (published by docker-publish.yml).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+
+jobs:
+  build-plugin:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ghcr.io/${{ github.repository_owner }}/viennaps-paraview:dev
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Configure
+        run: |
+          cmake -GNinja -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DParaView_DIR=/opt/paraview/lib/cmake/paraview-6.1
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"

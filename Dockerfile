@@ -4,8 +4,8 @@ ARG UBUNTU_VERSION=24.04
 ARG PARAVIEW_TAG=v6.1.0
 ARG BUILD_JOBS=4
 
-# Stage 1: builder
-FROM ubuntu:${UBUNTU_VERSION} AS builder
+# Stage 1: dev — ParaView from source + build tooling (published as :dev, reused by CI).
+FROM ubuntu:${UBUNTU_VERSION} AS dev
 
 ARG PARAVIEW_TAG
 ARG BUILD_JOBS
@@ -70,6 +70,28 @@ RUN cmake -GNinja \
  && ninja install \
  && rm -rf /src/paraview
 
+# Prebuilt so ViennaRay's CPMFindPackage reuses it via find_package() instead of
+# recompiling. Options match ViennaRay's defaults (v4.3.3, ray masking on).
+ARG EMBREE_TAG=v4.3.3
+RUN git clone --depth 1 --branch ${EMBREE_TAG} \
+      https://github.com/embree/embree.git /src/embree \
+ && cmake -GNinja -S /src/embree -B /src/embree/build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/opt/embree \
+      -DEMBREE_RAY_MASK=ON \
+      -DEMBREE_ISPC_SUPPORT=OFF \
+      -DEMBREE_TUTORIALS=OFF \
+ && ninja -C /src/embree/build -j${BUILD_JOBS} \
+ && ninja -C /src/embree/build install \
+ && rm -rf /src/embree
+# Make the prebuilt Embree discoverable by find_package() in the plugin/ViennaRay build.
+ENV CMAKE_PREFIX_PATH=/opt/embree
+
+# Stage 2: builder — builds the plugin on top of dev.
+FROM dev AS builder
+
+ARG BUILD_JOBS
+
 WORKDIR /src/plugin
 COPY CMakeLists.txt ./
 COPY cmake ./cmake
@@ -83,9 +105,9 @@ RUN cmake -GNinja \
  && ninja -j${BUILD_JOBS} \
  && mkdir -p /opt/plugin \
  && cp -r lib/paraview-6.1/plugins/. /opt/plugin/ \
- && find /src/plugin -name "libembree*.so*" -exec cp -aP {} /opt/paraview/lib/ \;
+ && find /opt/embree -name "libembree*.so*" -exec cp -aP {} /opt/paraview/lib/ \;
 
-# Stage 2: runtime
+# Stage 3: runtime — slim image with ParaView + plugin, no build tooling.
 FROM ubuntu:${UBUNTU_VERSION} AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
