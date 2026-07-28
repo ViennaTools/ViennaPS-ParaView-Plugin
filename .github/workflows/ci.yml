@@ -7,13 +7,22 @@ on:
   pull_request: {}
 
 jobs:
+  image-name:
+    runs-on: ubuntu-latest
+    outputs:
+      dev: ${{ steps.name.outputs.dev }}
+    steps:
+      - id: name
+        run: echo "dev=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/viennaps-paraview:dev" >> "$GITHUB_OUTPUT"
+
   build-plugin:
+    needs: image-name
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: read
     container:
-      image: ghcr.io/${{ github.repository_owner }}/viennaps-paraview:dev
+      image: ${{ needs.image-name.outputs.dev }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
