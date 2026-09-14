@@ -1,6 +1,8 @@
 # Build artifacts
 build/
 build_*/
+dockerbuild/
+pv-work/
 out/
 cmake-build-*/
 CMakeCache.txt
@@ -35,6 +37,7 @@ core.*
 *.vtu
 *.vti
 *.vtk
+*.pvsm
 
 # IDE / Editor
 .vs/

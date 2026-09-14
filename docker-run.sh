@@ -45,10 +45,22 @@ if [[ -f "${HOME}/.Xauthority" ]]; then
   XAUTH_ARGS+=(--volume "${HOME}/.Xauthority:/root/.Xauthority:ro")
 fi
 
+# Mount a host work dir at /data so saved state and exports survive --rm.
+WORK_DIR="${WORK_DIR:-${PWD}/pv-work}"
+mkdir -p "${WORK_DIR}"
+
+# Optionally override the image's plugin with a locally built one.
+PLUGIN_ARGS=()
+if [[ -n "${PLUGIN_DIR:-}" ]]; then
+  PLUGIN_ARGS=(--volume "${PLUGIN_DIR}:/opt/paraview/lib/paraview-6.1/plugins/ViennaPSPluginModule:ro")
+fi
+
 exec docker run --rm -it \
   --env DISPLAY="${DISPLAY}" \
   --env QT_X11_NO_MITSHM=1 \
   --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
+  --volume "${WORK_DIR}:/data" \
+  "${PLUGIN_ARGS[@]}" \
   "${XAUTH_ARGS[@]}" \
   --net=host \
   "${GPU_ARGS[@]}" \
