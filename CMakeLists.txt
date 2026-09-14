@@ -22,17 +22,10 @@ endif()
 include(cmake/cpm.cmake)
 
 CPMAddPackage(
-  NAME ViennaLS
-  VERSION 5.8.3
-  GIT_REPOSITORY "https://github.com/ViennaTools/ViennaLS"
-  GIT_TAG b0c35942d477b72c2439d06669276ac653caa470
-  OPTIONS "VIENNALS_USE_VTK ON" "VIENNALS_VTK_RENDERING OFF")
-
-CPMAddPackage(
   NAME ViennaPS
-  VERSION 4.6.1
+  VERSION 4.7.0
+  GIT_TAG 155e8597bc36fa86ef621de45668dbd3cd4c08a9
   GIT_REPOSITORY "https://github.com/ViennaTools/ViennaPS"
-  GIT_TAG 2956ed587984c6dc38be24c6e2390e10c9b2f0a7
   OPTIONS "VIENNAPS_USE_GPU OFF")
 
 add_compile_definitions(VIENNARAY_USE_RAY_MASKING)
