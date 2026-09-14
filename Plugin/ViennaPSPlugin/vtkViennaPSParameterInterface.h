@@ -23,6 +23,9 @@ public:
   vtkSetMacro(ModelType, int);
   vtkGetMacro(ModelType, int);
 
+  virtual void SetState(const char* s);
+  const char* GetState() { return this->StateString.c_str(); }
+
   vtkGetObjectMacro(PropertyManager, vtkViennaPSPropertyManager);
 
   virtual void SetParameterDouble(const char* name, double value);
@@ -71,6 +74,7 @@ protected:
   bool Dummy = false;
   int ModelType = 0;
   int OutputFormat = 1;  // Default to Surface (matches DomainObject default)
+  std::string StateString;
 
 private:
   vtkViennaPSParameterInterface(const vtkViennaPSParameterInterface&) = delete;

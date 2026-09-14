@@ -31,6 +31,17 @@ void vtkViennaPSParameterInterface::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Parameters: " << PropertyManager->GetAllParameters().size() << "\n";
 }
 
+void vtkViennaPSParameterInterface::SetState(const char* s)
+{
+  std::string incoming = s ? s : "";
+  if (incoming == this->StateString) return;
+  this->StateString = incoming;
+  // The widget rebuilds the panel from this string and pushes the concrete
+  // parameter values on Apply; storing it here is enough for the "State"
+  // property to round-trip through ParaView Save State / Load State.
+  this->Modified();
+}
+
 //----------------------------------------------------------------------------
 void vtkViennaPSParameterInterface::SetParameterDouble(const char* name, double value)
 {

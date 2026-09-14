@@ -80,6 +80,8 @@ private:
 
   void loadModel(const QString& modelName);
 
+  void restoreStateFromProxy();
+
   int modelRegistryIndex(const QString& modelName) const;
 
   bool evaluateCondition(const QString& condition);

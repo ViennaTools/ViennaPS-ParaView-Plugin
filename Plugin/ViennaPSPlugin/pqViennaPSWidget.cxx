@@ -29,8 +29,10 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QListWidget>
 #include <QListWidgetItem>
 #include <QStandardItemModel>
+#include <QTimer>
 
 #include <pqApplicationCore.h>
 #include <pqServerManagerModel.h>
@@ -206,6 +208,8 @@ void pqViennaPSWidget::initialize()
   if (modelSelector->count() > 0) {
     onModelChanged(modelSelector->currentIndex());
   }
+
+  restoreStateFromProxy();
 }
 
 void pqViennaPSWidget::determineWidgetType()
@@ -553,6 +557,78 @@ void pqViennaPSWidget::clearParameterWidgets()
   parameterWidgets.clear();
   parameterLabels.clear();
   parameterValues.clear();
+}
+
+void pqViennaPSWidget::restoreStateFromProxy()
+{
+  if (!proxy) return;
+
+  vtkSMProperty* stateProp = proxy->GetProperty("State");
+  if (!stateProp) return;
+
+  vtkSMPropertyHelper helper(stateProp);
+  if (helper.GetNumberOfElements() < 1) return;
+  const char* raw = helper.GetAsString(0);
+  if (!raw || raw[0] == '\0') return;
+
+  ViennaPSMeta::WidgetState st = ViennaPSMeta::deserializeWidgetState(raw);
+  if (!st.valid) return;
+
+  int mi = modelSelector->findData(QString::fromStdString(st.model));
+  if (mi >= 0) {
+    if (mi != modelSelector->currentIndex())
+      modelSelector->setCurrentIndex(mi);
+    else
+      onModelChanged(mi);
+  }
+
+  gridDeltaSpinBox->setValue(st.gridDelta);
+  xExtentSpinBox->setValue(st.xExtent);
+  yExtentSpinBox->setValue(st.yExtent);
+  int di = targetDimensionComboBox->findData(st.targetDim);
+  if (di >= 0) targetDimensionComboBox->setCurrentIndex(di);
+  if (!isSource && processTimeSpinBox) processTimeSpinBox->setValue(st.processTime);
+  if (st.outputFormat >= 0 && st.outputFormat < outputFormatComboBox->count())
+    outputFormatComboBox->setCurrentIndex(st.outputFormat);
+
+  for (const auto& kv : st.params) {
+    const QString qn = QString::fromStdString(kv.first);
+    const ViennaPSMeta::ParameterValue& val = kv.second;
+    QWidget* w = parameterWidgets.value(qn, nullptr);
+    if (!w) continue;
+
+    if (auto* ds = qobject_cast<QDoubleSpinBox*>(w)) {
+      if (std::holds_alternative<double>(val)) ds->setValue(std::get<double>(val));
+    } else if (auto* is = qobject_cast<QSpinBox*>(w)) {
+      if (std::holds_alternative<int>(val)) is->setValue(std::get<int>(val));
+    } else if (auto* cb = qobject_cast<QCheckBox*>(w)) {
+      if (std::holds_alternative<bool>(val)) cb->setChecked(std::get<bool>(val));
+    } else if (auto* combo = qobject_cast<QComboBox*>(w)) {
+      if (std::holds_alternative<int>(val)) combo->setCurrentIndex(std::get<int>(val));
+    } else if (auto* le = qobject_cast<QLineEdit*>(w)) {
+      if (std::holds_alternative<std::string>(val))
+        le->setText(QString::fromStdString(std::get<std::string>(val)));
+    } else if (std::holds_alternative<ViennaPSMeta::MaterialListValue>(val)) {
+      QListWidget* lw = w->property("listWidget").value<QListWidget*>();
+      if (lw) {
+        lw->clear();
+        QList<QVariant> ids;
+        for (int id : std::get<ViennaPSMeta::MaterialListValue>(val).materialIds) {
+          auto mat = viennaps::MaterialMap::mapToMaterial(id);
+          QListWidgetItem* item =
+            new QListWidgetItem(QString::fromStdString(viennaps::MaterialMap::toString(mat)));
+          item->setData(Qt::UserRole, id);
+          lw->addItem(item);
+          ids.append(id);
+        }
+        parameterValues[qn] = ids;
+      }
+    }
+  }
+
+  updateParameterVisibility();
+
+  QTimer::singleShot(0, this, [this]() { emit changeAvailable(); });
 }
 
 QWidget* pqViennaPSWidget::createDoubleWidget(const QString& name,
@@ -941,7 +1017,39 @@ void pqViennaPSWidget::applyChanges()
 
     vtkSource->Modified();
   }
-  
+
+  // Serialize the current panel into the "State" property so ParaView's
+  // Save State persists it (and Load State can rebuild the panel from it).
+  {
+    ViennaPSMeta::WidgetState st;
+    st.model = modelSelector->itemData(modelSelector->currentIndex()).toString().toStdString();
+    st.gridDelta = gridDeltaSpinBox->value();
+    st.xExtent = xExtentSpinBox->value();
+    st.yExtent = yExtentSpinBox->value();
+    st.targetDim = targetDimensionComboBox->currentData().toInt();
+    st.processTime = (!isSource && processTimeSpinBox) ? processTimeSpinBox->value() : 0.0;
+    st.outputFormat = outputFormatComboBox->currentIndex();
+    for (auto it = parameterValues.begin(); it != parameterValues.end(); ++it) {
+      const std::string nm = it.key().toStdString();
+      const QVariant& v = it.value();
+      switch (v.userType()) {
+        case QMetaType::Double:  st.params[nm] = v.toDouble(); break;
+        case QMetaType::Int:     st.params[nm] = v.toInt(); break;
+        case QMetaType::Bool:    st.params[nm] = v.toBool(); break;
+        case QMetaType::QString: st.params[nm] = v.toString().toStdString(); break;
+        case QMetaType::QVariantList: {
+          ViennaPSMeta::MaterialListValue m;
+          for (const auto& e : v.toList()) m.materialIds.push_back(e.toInt());
+          st.params[nm] = m;
+          break;
+        }
+        default: break;
+      }
+    }
+    std::string serialized = ViennaPSMeta::serializeWidgetState(st);
+    vtkSMPropertyHelper(proxy, "State").Set(serialized.c_str());
+  }
+
   vtkSMPropertyHelper(proxy, "Dummy").Set(!dummy);
   dummy = !dummy;
   proxy->UpdateVTKObjects();

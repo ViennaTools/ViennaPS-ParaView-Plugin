@@ -148,6 +148,115 @@ struct ModelMetadata {
 using ParameterValue = std::variant<double, int, bool, std::string, MaterialListValue>;
 using ParameterMap = std::map<std::string, ParameterValue>;
 
+// --------------------------------------------------------------------------
+// Serializable snapshot of a source/filter panel, used so that ParaView's
+// Save State / Load State round-trips the dynamically generated parameters.
+// The whole state is encoded into a single string that is carried by a
+// standard Server-Manager StringVectorProperty ("State").
+// --------------------------------------------------------------------------
+struct WidgetState {
+    std::string model;
+    double gridDelta = 0.25;
+    double xExtent = 10.0;
+    double yExtent = 10.0;
+    double processTime = 5.0;
+    int targetDim = 3;
+    int outputFormat = 1;
+    ParameterMap params;
+    bool valid = false;
+};
+
+inline std::string serializeWidgetState(const WidgetState& s) {
+    std::ostringstream oss;
+    oss.precision(17);
+    oss << "model=" << s.model
+        << ";;gridDelta=" << s.gridDelta
+        << ";;xExtent=" << s.xExtent
+        << ";;yExtent=" << s.yExtent
+        << ";;targetDim=" << s.targetDim
+        << ";;processTime=" << s.processTime
+        << ";;outputFormat=" << s.outputFormat;
+    for (const auto& [name, val] : s.params) {
+        oss << ";;param:";
+        std::visit([&](const auto& v) {
+            using T = std::decay_t<decltype(v)>;
+            if constexpr (std::is_same_v<T, double>)      oss << "d:" << name << "=" << v;
+            else if constexpr (std::is_same_v<T, int>)    oss << "i:" << name << "=" << v;
+            else if constexpr (std::is_same_v<T, bool>)   oss << "b:" << name << "=" << (v ? 1 : 0);
+            else if constexpr (std::is_same_v<T, std::string>) oss << "s:" << name << "=" << v;
+            else if constexpr (std::is_same_v<T, MaterialListValue>) {
+                oss << "m:" << name << "=";
+                for (size_t i = 0; i < v.materialIds.size(); ++i) {
+                    if (i) oss << ",";
+                    oss << v.materialIds[i];
+                }
+            }
+        }, val);
+    }
+    return oss.str();
+}
+
+inline WidgetState deserializeWidgetState(const std::string& str) {
+    WidgetState s;
+    if (str.empty()) return s;
+
+    std::vector<std::string> records;
+    size_t pos = 0;
+    while (true) {
+        size_t next = str.find(";;", pos);
+        if (next == std::string::npos) { records.push_back(str.substr(pos)); break; }
+        records.push_back(str.substr(pos, next - pos));
+        pos = next + 2;
+    }
+
+    for (const auto& rec : records) {
+        if (rec.empty()) continue;
+        size_t eq = rec.find('=');
+        if (eq == std::string::npos) continue;
+        std::string key = rec.substr(0, eq);
+        std::string val = rec.substr(eq + 1);
+        try {
+            if (key == "model") s.model = val;
+            else if (key == "gridDelta")   s.gridDelta = std::stod(val);
+            else if (key == "xExtent")     s.xExtent = std::stod(val);
+            else if (key == "yExtent")     s.yExtent = std::stod(val);
+            else if (key == "targetDim")   s.targetDim = std::stoi(val);
+            else if (key == "processTime") s.processTime = std::stod(val);
+            else if (key == "outputFormat") s.outputFormat = std::stoi(val);
+            else if (key.rfind("param:", 0) == 0) {
+                std::string rest = key.substr(6);       // "<t>:<name>"
+                if (rest.size() < 2 || rest[1] != ':') continue;
+                char t = rest[0];
+                std::string name = rest.substr(2);
+                switch (t) {
+                    case 'd': s.params[name] = std::stod(val); break;
+                    case 'i': s.params[name] = std::stoi(val); break;
+                    case 'b': s.params[name] = (val == "1" || val == "true"); break;
+                    case 's': s.params[name] = val; break;
+                    case 'm': {
+                        MaterialListValue m;
+                        size_t p = 0;
+                        while (!val.empty()) {
+                            size_t c = val.find(',', p);
+                            std::string tok = (c == std::string::npos) ? val.substr(p)
+                                                                       : val.substr(p, c - p);
+                            if (!tok.empty()) m.materialIds.push_back(std::stoi(tok));
+                            if (c == std::string::npos) break;
+                            p = c + 1;
+                        }
+                        s.params[name] = m;
+                        break;
+                    }
+                    default: break;
+                }
+            }
+        } catch (...) {
+        }
+    }
+    s.valid = !s.model.empty();
+    return s;
+}
+
 inline std::string ParameterValueToString(const ParameterValue& value) {
     std::ostringstream oss;
     std::visit([&oss](const auto& v) {

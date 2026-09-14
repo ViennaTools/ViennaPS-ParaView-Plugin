@@ -34,6 +34,18 @@
       <BooleanDomain name="bool"/>
       </IntVectorProperty>
 
+      <StringVectorProperty name="State"
+                            command="SetState"
+                            number_of_elements="1"
+                            default_values=""
+                            panel_visibility="never">
+        <Documentation>
+          Serialized panel state (model, domain settings, and all model
+          parameters) so ParaView Save State / Load State round-trips the
+          dynamically generated parameters. Not shown in the panel.
+        </Documentation>
+      </StringVectorProperty>
+
       <Hints>
         <ShowInMenu category="ViennaPS" />
       </Hints>
@@ -61,6 +73,18 @@
                          label="">
       <BooleanDomain name="bool"/>
       </IntVectorProperty>
+
+      <StringVectorProperty name="State"
+                            command="SetState"
+                            number_of_elements="1"
+                            default_values=""
+                            panel_visibility="never">
+        <Documentation>
+          Serialized panel state (model, domain settings, and all model
+          parameters) so ParaView Save State / Load State round-trips the
+          dynamically generated parameters. Not shown in the panel.
+        </Documentation>
+      </StringVectorProperty>
 
       <Hints>
         <ShowInMenu category="ViennaPS" />
